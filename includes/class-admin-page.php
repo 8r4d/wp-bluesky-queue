@@ -80,8 +80,8 @@ class WPBQ_Admin_Page {
 
     public function add_menu() {
         add_menu_page(
-            'Bluesky Queue',
-            'Bluesky Queue',
+            'Bluedon Queue',
+            'Bluedon Queue',
             'manage_options',
             'wpbq-queue',
             array($this, 'render_queue_page'),
@@ -211,7 +211,7 @@ class WPBQ_Admin_Page {
 
         ?>
         <div class="wrap wpbq-wrap">
-            <h1>🦋 Bluesky Queue</h1>
+            <h1>🦋 Bluedon Queue</h1>
 
             <!-- Stats Bar -->
             <div class="wpbq-stats">
@@ -480,7 +480,7 @@ echo '</p></div>';
         ?>
         <div class="wrap wpbq-wrap">
             <h1>📚 Import Blog Archives to Queue</h1>
-            <p>Import your published blog posts as Bluesky queue items. Each post will generate a social post with the title, excerpt, and link.</p>
+            <p>Import your published blog posts as Bluedon queue items. Each post will generate a social post with the title, excerpt, and link.</p>
 
             <form id="wpbq-import-form">
                 <table class="form-table">
@@ -582,7 +582,7 @@ echo '</p></div>';
     public function render_settings_page() {
         ?>
         <div class="wrap wpbq-wrap">
-            <h1>⚙️ Bluesky Queue Settings</h1>
+            <h1>⚙️ Queue Settings</h1>
             <form method="post" action="options.php">
                 <?php settings_fields('wpbq_settings'); ?>
 

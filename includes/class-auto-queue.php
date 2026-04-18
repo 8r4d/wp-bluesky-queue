@@ -121,7 +121,7 @@ class WPBQ_Auto_Queue {
         delete_transient('wpbq_just_queued_' . get_current_user_id());
 
         $message = sprintf(
-            '🦋 "<strong>%s</strong>" was automatically added to your Bluesky queue.',
+            '🦋 "<strong>%s</strong>" was automatically added to your Bluedon queue.',
             esc_html($notice['post_title'])
         );
 
@@ -175,9 +175,9 @@ class WPBQ_Auto_Queue {
         <?php if ($queued) : ?>
             <p>
                 <?php if ($queued->status === 'posted') : ?>
-                    ✅ Already posted to Bluesky
+                    ✅ Already posted
                 <?php elseif ($queued->status === 'queued') : ?>
-                    📋 In Bluesky queue (#<?php echo $queued->id; ?>)
+                    📋 In Bluedon queue (#<?php echo $queued->id; ?>)
                     — <a href="<?php echo admin_url('admin.php?page=wpbq-queue'); ?>">View Queue</a>
                 <?php elseif ($queued->status === 'failed') : ?>
                     ❌ Failed to post — <a href="<?php echo admin_url('admin.php?page=wpbq-log'); ?>">View Log</a>
@@ -191,7 +191,7 @@ class WPBQ_Auto_Queue {
             <strong>Skip</strong> auto-queue for this post
         </label>
         <p class="description" style="margin-top:8px;">
-            If checked, this post won't be automatically added to the Bluesky queue when published.
+            If checked, this post won't be automatically added to the Bluedon queue when published.
         </p>
         <?php
     }
