@@ -15,6 +15,7 @@ class WPBQ_Admin_Page {
         add_action('wp_ajax_wpbq_requeue_item', array($this, 'ajax_requeue_item'));
         add_action('wp_ajax_wpbq_update_order', array($this, 'ajax_update_order'));
         add_action('wp_ajax_wpbq_debug_image', array($this, 'ajax_debug_image'));
+        add_action('wp_ajax_wpbq_test_mastodon', array($this, 'ajax_test_mastodon'));
         
     }
 
@@ -126,43 +127,61 @@ class WPBQ_Admin_Page {
     }
 
     public function register_settings() {
+        $group = 'wpbq_settings';
+
         // Bluesky credentials
-        register_setting('wpbq_settings', 'wpbq_bluesky_handle', array(
+        register_setting($group, 'wpbq_bluesky_enabled', 'absint');
+        register_setting($group, 'wpbq_bluesky_handle', array(
             'sanitize_callback' => function($value) {
-                // Strip whitespace, remove @ if they included it
                 $value = trim($value);
                 $value = ltrim($value, '@');
                 return sanitize_text_field($value);
             }
         ));
-
-        register_setting('wpbq_settings', 'wpbq_bluesky_app_password', array(
+        register_setting($group, 'wpbq_bluesky_app_password', array(
             'sanitize_callback' => function($value) {
-                // Only trim whitespace — don't run sanitize_text_field
-                // which could mangle the password
                 return trim($value);
             }
         ));
-
-        register_setting('wpbq_settings', 'wpbq_bluesky_pds_host', array(
+        register_setting($group, 'wpbq_bluesky_pds_host', array(
             'sanitize_callback' => function($value) {
-                // Ensure no trailing slash
                 return rtrim(esc_url_raw($value), '/');
             }
         ));
 
+        // Mastodon
+        register_setting($group, 'wpbq_mastodon_enabled', 'absint');
+        register_setting($group, 'wpbq_mastodon_instance', array(
+            'sanitize_callback' => function($value) {
+                return rtrim(esc_url_raw($value), '/');
+            }
+        ));
+        register_setting($group, 'wpbq_mastodon_token', array(
+            'sanitize_callback' => function($value) {
+                return trim($value);
+            }
+        ));
+        register_setting($group, 'wpbq_mastodon_visibility', 'sanitize_text_field');
+
         // Queue settings
-        register_setting('wpbq_settings', 'wpbq_queue_enabled', 'absint');
-        register_setting('wpbq_settings', 'wpbq_random_enabled', 'absint');
-        register_setting('wpbq_settings', 'wpbq_post_interval', 'absint');
-        register_setting('wpbq_settings', 'wpbq_daily_limit', 'absint');
-        register_setting('wpbq_settings', 'wpbq_posting_start_hour', 'absint');
-        register_setting('wpbq_settings', 'wpbq_posting_end_hour', 'absint');
-        register_setting('wpbq_settings', 'wpbq_random_probability', 'absint');
-        register_setting('wpbq_settings', 'wpbq_post_template', 'sanitize_textarea_field');
-        register_setting('wpbq_settings', 'wpbq_max_hashtags');
-        register_setting('wpbq_settings', 'wpbq_hashtags_from_categories');
-        register_setting('wpbq_settings', 'wpbq_always_include_hashtags');
+        register_setting($group, 'wpbq_queue_enabled', 'absint');
+        register_setting($group, 'wpbq_random_enabled', 'absint');
+        register_setting($group, 'wpbq_post_interval', 'absint');
+        register_setting($group, 'wpbq_daily_limit', 'absint');
+        register_setting($group, 'wpbq_posting_start_hour', 'absint');
+        register_setting($group, 'wpbq_posting_end_hour', 'absint');
+        register_setting($group, 'wpbq_random_probability', 'absint');
+        register_setting($group, 'wpbq_post_template', 'sanitize_textarea_field');
+
+        // Hashtags
+        register_setting($group, 'wpbq_max_hashtags', 'absint');
+        register_setting($group, 'wpbq_hashtags_from_categories', 'absint');
+        register_setting($group, 'wpbq_always_include_hashtags', 'sanitize_text_field');
+
+        // Auto-queue
+        register_setting($group, 'wpbq_auto_queue_enabled', 'absint');
+        register_setting($group, 'wpbq_auto_queue_post_types');
+        register_setting($group, 'wpbq_auto_queue_delay', 'absint');
     }
 
     public function enqueue_assets($hook) {
@@ -567,8 +586,19 @@ echo '</p></div>';
             <form method="post" action="options.php">
                 <?php settings_fields('wpbq_settings'); ?>
 
-                <h2>🔑 Bluesky Account</h2>
-                <table class="form-table">
+                    <!-- ====== BLUESKY ACCOUNT ====== -->
+                    <h2>🦋 Bluesky</h2>
+                    <table class="form-table">
+                        <tr>
+                            <th>Enable Bluesky</th>
+                            <td>
+                                <label>
+                                    <input type="checkbox" name="wpbq_bluesky_enabled" value="1"
+                                        <?php checked(get_option('wpbq_bluesky_enabled', 1), 1); ?>>
+                                    Post to Bluesky when processing queue
+                                </label>
+                            </td>
+                        </tr>
                     <tr>
                         <th>Bluesky Handle</th>
                         <td>
@@ -598,6 +628,63 @@ echo '</p></div>';
                     </tr>
                 </table>
 
+                <!-- ====== MASTODON ====== -->
+                <h2>🐘 Mastodon</h2>
+                <table class="form-table">
+                    <tr>
+                        <th>Enable Mastodon</th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="wpbq_mastodon_enabled" value="1"
+                                    <?php checked(get_option('wpbq_mastodon_enabled'), 1); ?>>
+                                Also post to Mastodon when processing queue
+                            </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Instance URL</th>
+                        <td>
+                            <input type="url" name="wpbq_mastodon_instance"
+                                value="<?php echo esc_attr(get_option('wpbq_mastodon_instance')); ?>"
+                                class="regular-text" placeholder="https://mastodon.social">
+                            <p class="description">Your Mastodon instance (e.g., https://mastodon.social, https://fosstodon.org)</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Access Token</th>
+                        <td>
+                            <input type="password" name="wpbq_mastodon_token"
+                                value="<?php echo esc_attr(get_option('wpbq_mastodon_token')); ?>"
+                                class="regular-text">
+                            <p class="description">
+                                To get a token:<br>
+                                1. Go to your Mastodon instance → Preferences → Development → New Application<br>
+                                2. Application name: <code>WP Bluesky Queue</code><br>
+                                3. Scopes needed: <code>write:statuses</code> and <code>write:media</code><br>
+                                4. Submit, then click your app name and copy the <strong>Access Token</strong>
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Post Visibility</th>
+                        <td>
+                            <select name="wpbq_mastodon_visibility">
+                                <?php $vis = get_option('wpbq_mastodon_visibility', 'public'); ?>
+                                <option value="public" <?php selected($vis, 'public'); ?>>🌍 Public</option>
+                                <option value="unlisted" <?php selected($vis, 'unlisted'); ?>>🔓 Unlisted</option>
+                                <option value="private" <?php selected($vis, 'private'); ?>>🔒 Followers Only</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Test Connection</th>
+                        <td>
+                            <button type="button" id="wpbq-test-mastodon" class="button">🔌 Test Mastodon Connection</button>
+                            <span id="wpbq-test-mastodon-result"></span>
+                            <p class="description">⚠️ Make sure to <strong>Save Changes</strong> before testing.</p>
+                        </td>
+                    </tr>
+                </table>
                 <h2>#️⃣ Hashtags</h2>
                             <table class="form-table">
                                 <tr>
@@ -839,5 +926,21 @@ echo '</p></div>';
         }
 
         wp_send_json_success('✅ Connected to Bluesky successfully!');
+    }
+
+
+    public function ajax_test_mastodon() {
+        check_ajax_referer('wpbq_nonce', 'nonce');
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+
+        $api    = new WPBQ_Mastodon_API();
+        $result = $api->test_connection();
+
+        if (is_wp_error($result)) {
+            wp_send_json_error('Connection failed: ' . $result->get_error_message());
+        }
+
+        $name = isset($result['display_name']) ? $result['display_name'] : $result['username'];
+        wp_send_json_success('✅ Connected as ' . $name . ' (@' . $result['username'] . ')');
     }
 }

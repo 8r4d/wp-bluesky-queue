@@ -214,27 +214,50 @@
     // Test Connection (AJAX)
     // =====================
     $('#wpbq-test-connection').on('click', function() {
-        var $btn = $(this);
-        var $result = $('#wpbq-test-result');
+            var $btn = $(this);
+            var $result = $('#wpbq-test-result');
 
-        $btn.prop('disabled', true);
-        $result.html('<span class="wpbq-loading"></span> Testing...');
+            $btn.prop('disabled', true);
+            $result.html('<span class="wpbq-loading"></span> Testing...');
 
-        $.post(wpbq.ajax_url, {
-            action: 'wpbq_test_connection',
-            nonce: wpbq.nonce
-        }, function(response) {
-            if (response.success) {
-                $result.html('<span style="color:#1e8e3e;">' + response.data + '</span>');
-            } else {
-                $result.html('<span style="color:#d93025;">❌ ' + response.data + '</span>');
-            }
-        }).fail(function() {
-            $result.html('<span style="color:#d93025;">❌ Network error</span>');
-        }).always(function() {
-            $btn.prop('disabled', false);
+            $.post(wpbq.ajax_url, {
+                action: 'wpbq_test_connection',
+                nonce: wpbq.nonce
+            }, function(response) {
+                if (response.success) {
+                    $result.html('<span style="color:#1e8e3e;">' + response.data + '</span>');
+                } else {
+                    $result.html('<span style="color:#d93025;">❌ ' + response.data + '</span>');
+                }
+            }).fail(function() {
+                $result.html('<span style="color:#d93025;">❌ Network error</span>');
+            }).always(function() {
+                $btn.prop('disabled', false);
+            });
         });
-    });
+
+        $('#wpbq-test-mastodon').on('click', function() {
+            var $btn = $(this);
+            var $result = $('#wpbq-test-mastodon-result');
+
+            $btn.prop('disabled', true);
+            $result.html('<span class="wpbq-loading"></span> Testing...');
+
+            $.post(wpbq.ajax_url, {
+                action: 'wpbq_test_mastodon',
+                nonce: wpbq.nonce
+            }, function(response) {
+                if (response.success) {
+                    $result.html('<span style="color:#1e8e3e;">' + response.data + '</span>');
+                } else {
+                    $result.html('<span style="color:#d93025;">❌ ' + response.data + '</span>');
+                }
+            }).fail(function() {
+                $result.html('<span style="color:#d93025;">❌ Network error</span>');
+            }).always(function() {
+                $btn.prop('disabled', false);
+            });
+        });
 
     // =====================
     // Drag & Drop Reordering

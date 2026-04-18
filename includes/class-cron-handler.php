@@ -103,36 +103,67 @@ class WPBQ_Cron_Handler {
      * Post a specific queue item to Bluesky
      */
     public static function post_queue_item($item) {
-        $api = new WPBQ_Bluesky_API();
+        $any_success = false;
+        $all_errors = array();
 
-        $result = $api->create_post(
-            $item->post_text,
-            $item->link_url,
-            $item->image_url
-        );
+        // ---- BLUESKY (existing, unchanged logic) ----
+        if (get_option('wpbq_bluesky_enabled', true)) {
+            $bsky_api = new WPBQ_Bluesky_API();
+            $bsky_result = $bsky_api->create_post(
+                $item->post_text,
+                $item->link_url,
+                $item->image_url
+            );
 
-        if (is_wp_error($result)) {
-            WPBQ_Queue_Manager::update_item($item->id, array('status' => 'failed'));
-            WPBQ_Queue_Manager::log($item->id, 'post_failed', $result->get_error_message());
-            return false;
+            if (is_wp_error($bsky_result)) {
+                $all_errors[] = 'Bluesky: ' . $bsky_result->get_error_message();
+                WPBQ_Queue_Manager::log($item->id, 'bluesky_failed', $bsky_result->get_error_message());
+            } else {
+                $any_success = true;
+                WPBQ_Queue_Manager::log(
+                    $item->id,
+                    'bluesky_posted',
+                    'Posted to Bluesky. URI: ' . (isset($bsky_result['uri']) ? $bsky_result['uri'] : 'N/A')
+                );
+            }
         }
 
-        // Success! Update the queue item
-        WPBQ_Queue_Manager::update_item($item->id, array(
-            'status'      => 'posted',
-            'posted_at'   => current_time('mysql', true),
-            'bluesky_uri' => isset($result['uri']) ? $result['uri'] : '',
-        ));
+        // ---- MASTODON (new, only runs if enabled) ----
+        if (get_option('wpbq_mastodon_enabled', false)) {
+            $masto_api = new WPBQ_Mastodon_API();
+            $masto_result = $masto_api->create_post(
+                $item->post_text,
+                $item->link_url,
+                $item->image_url
+            );
 
-        update_option('wpbq_last_posted_time', time());
+            if (is_wp_error($masto_result)) {
+                $all_errors[] = 'Mastodon: ' . $masto_result->get_error_message();
+                WPBQ_Queue_Manager::log($item->id, 'mastodon_failed', $masto_result->get_error_message());
+            } else {
+                $any_success = true;
+                WPBQ_Queue_Manager::log(
+                    $item->id,
+                    'mastodon_posted',
+                    'Posted to Mastodon. URL: ' . (isset($masto_result['url']) ? $masto_result['url'] : 'N/A')
+                );
+            }
+        }
 
-        WPBQ_Queue_Manager::log(
-            $item->id,
-            'posted',
-            'Successfully posted to Bluesky. URI: ' . (isset($result['uri']) ? $result['uri'] : 'N/A')
-        );
-
-        return true;
+        // ---- UPDATE STATUS ----
+        if ($any_success) {
+            WPBQ_Queue_Manager::update_item($item->id, array(
+                'status'      => 'posted',
+                'posted_at'   => current_time('mysql', true),
+                'bluesky_uri' => isset($bsky_result['uri']) ? $bsky_result['uri'] : '',
+            ));
+            update_option('wpbq_last_posted_time', time());
+            return true;
+        } else {
+            WPBQ_Queue_Manager::update_item($item->id, array('status' => 'failed'));
+            WPBQ_Queue_Manager::log($item->id, 'post_failed', implode(' | ', $all_errors));
+            return false;
+        }
     }
 
     /**

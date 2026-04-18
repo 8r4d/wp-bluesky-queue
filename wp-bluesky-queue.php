@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP Bluesky Queue
  * Description: Manage and auto-post a queue of social media posts to Bluesky, including blog archive links.
- * Version: 1.1.11
+ * Version: 1.2.2
  * Author: Brad & Claude
  * License: GPL v2 or later
  * Text Domain: wp-bluesky-queue
@@ -10,12 +10,13 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('WPBQ_VERSION', '1.1.11');
+define('WPBQ_VERSION', '1.2.2');
 define('WPBQ_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('WPBQ_PLUGIN_URL', plugin_dir_url(__FILE__));
 
 // Include classes
 require_once WPBQ_PLUGIN_DIR . 'includes/class-bluesky-api.php';
+require_once WPBQ_PLUGIN_DIR . 'includes/class-mastodon-api.php'; 
 require_once WPBQ_PLUGIN_DIR . 'includes/class-queue-manager.php';
 require_once WPBQ_PLUGIN_DIR . 'includes/class-cron-handler.php';
 require_once WPBQ_PLUGIN_DIR . 'includes/class-admin-page.php';

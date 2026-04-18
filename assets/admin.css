@@ -216,3 +216,24 @@
 @keyframes wpbq-spin {
     to { transform: rotate(360deg); }
 }
+
+
+.wpbq-log-bluesky_posted {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.wpbq-log-bluesky_failed {
+    background: #fce8e6;
+    color: #d93025;
+}
+
+.wpbq-log-mastodon_posted {
+    background: #ede9fe;
+    color: #6d28d9;
+}
+
+.wpbq-log-mastodon_failed {
+    background: #fce8e6;
+    color: #d93025;
+}
