@@ -1,0 +1,218 @@
+.wpbq-wrap {
+    max-width: 1200px;
+}
+
+.wpbq-stats {
+    display: flex;
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.wpbq-stat {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    padding: 12px 20px;
+    text-decoration: none;
+    color: #23282d;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.wpbq-stat:hover {
+    border-color: #007cba;
+    color: #007cba;
+}
+
+.wpbq-stat.active {
+    border-color: #007cba;
+    background: #f0f6fc;
+    color: #007cba;
+    font-weight: 600;
+}
+
+.wpbq-stat strong {
+    font-size: 18px;
+    display: inline;
+}
+
+/* Add Form */
+.wpbq-add-form {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.wpbq-add-form h2 {
+    margin-top: 0;
+    padding-top: 0;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+/* Queue Table */
+#wpbq-queue-table {
+    margin-top: 10px;
+}
+
+#wpbq-queue-table td {
+    vertical-align: middle;
+}
+
+.wpbq-drag-handle {
+    cursor: grab;
+    font-size: 18px;
+    color: #999;
+    text-align: center;
+}
+
+.wpbq-drag-handle:active {
+    cursor: grabbing;
+}
+
+/* Sortable placeholder */
+#wpbq-queue-body .ui-sortable-placeholder {
+    background: #f0f6fc;
+    border: 2px dashed #007cba;
+    visibility: visible !important;
+    height: 50px;
+}
+
+#wpbq-queue-body tr.ui-sortable-helper {
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+/* Status Badges */
+.wpbq-status {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.wpbq-status-queued {
+    background: #e8f0fe;
+    color: #1a73e8;
+}
+
+.wpbq-status-posted {
+    background: #e6f4ea;
+    color: #1e8e3e;
+}
+
+.wpbq-status-failed {
+    background: #fce8e6;
+    color: #d93025;
+}
+
+.wpbq-status-scheduled {
+    background: #fef7e0;
+    color: #f9ab00;
+}
+
+/* Log Action Badges */
+.wpbq-log-action {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.wpbq-log-posted {
+    background: #e6f4ea;
+    color: #1e8e3e;
+}
+
+.wpbq-log-post_failed {
+    background: #fce8e6;
+    color: #d93025;
+}
+
+.wpbq-log-added,
+.wpbq-log-requeued {
+    background: #e8f0fe;
+    color: #1a73e8;
+}
+
+.wpbq-log-deleted {
+    background: #f1f1f1;
+    color: #666;
+}
+
+.wpbq-log-import {
+    background: #fef7e0;
+    color: #f9ab00;
+}
+
+/* Buttons in table */
+#wpbq-queue-table .button-small {
+    margin: 2px;
+}
+
+/* Character counter */
+#char-count {
+    font-weight: bold;
+}
+
+#char-count.warning {
+    color: #f9ab00;
+}
+
+#char-count.danger {
+    color: #d93025;
+}
+
+/* Import status */
+#wpbq-import-status {
+    margin-left: 15px;
+    font-weight: 600;
+}
+
+#wpbq-import-status.success {
+    color: #1e8e3e;
+}
+
+#wpbq-import-status.error {
+    color: #d93025;
+}
+
+/* Test connection */
+#wpbq-test-result {
+    margin-left: 10px;
+    font-weight: 600;
+}
+
+/* Responsive tweaks */
+@media screen and (max-width: 782px) {
+    .wpbq-stats {
+        flex-direction: column;
+    }
+
+    .wpbq-stat {
+        text-align: center;
+    }
+}
+
+/* Loading spinner */
+.wpbq-loading {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #ccc;
+    border-top-color: #007cba;
+    border-radius: 50%;
+    animation: wpbq-spin 0.6s linear infinite;
+    vertical-align: middle;
+    margin-left: 8px;
+}
+
+@keyframes wpbq-spin {
+    to { transform: rotate(360deg); }
+}
