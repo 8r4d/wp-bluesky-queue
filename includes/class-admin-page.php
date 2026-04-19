@@ -719,7 +719,7 @@ echo '</p></div>';
                                 </tr>
                             </table>
 
-                <h2>📅 Scheduling</h2>
+                <h2>📅 Scheduled Queue Posting</h2>
                 <table class="form-table">
                     <tr>
                         <th>Enable Queue Processing</th>
@@ -760,7 +760,7 @@ echo '</p></div>';
                     </tr>
                 </table>
 
-                <h2>🎲 Random Posting</h2>
+                <h2>🎲 Added Random Posting</h2>
                 <table class="form-table">
                     <tr>
                         <th>Enable Random Posts</th>
