@@ -4,7 +4,7 @@ Zip the files, keeping the structure, upload as a plugin and activate. Voila!
 
 Add and save app credentials from both Bluesky and Mastodon in the settings page to get started.
 
-You can import old posts into a queue that will fire based on a wp-cron to post simultaneously to both social networks as per the settings.
+You can import old posts into a queue that will fire based on a wp-cron to post simultaneously to both social networks as per the settings or set up a randomizer that will randomly post from the queue at a possibility percentage each time the 5 minute cron is activated (ie after 1 hour, a post has a x% chance of being sent at each 5 minute cron increment). 
 
 You can schedule manual posts written using the queue page.
 

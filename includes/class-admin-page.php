@@ -459,8 +459,9 @@ if (isset($_POST['wpbq_run_cron']) && wp_verify_nonce($_POST['_wpnonce'], 'wpbq_
         <?php
 
 
- $next_scheduled = wp_next_scheduled('wpbq_process_queue');
+$next_scheduled = wp_next_scheduled('wpbq_process_queue');
 $next_random    = wp_next_scheduled('wpbq_random_post');
+$today_count = self::get_todays_post_count();
 echo '<div class="notice notice-info"><p>';
 echo '⏰ <strong>Cron Status:</strong><br>';
 echo 'Queue processing next run: ' . ($next_scheduled ? date('M j, g:i:sa', $next_scheduled) . ' UTC (' . human_time_diff($next_scheduled) . ' from now)' : '❌ NOT SCHEDULED') . '<br>';
@@ -470,9 +471,25 @@ echo 'Current time (site): ' . current_time('M j, g:i:sa') . '<br>';
 echo 'Queue enabled: ' . (get_option('wpbq_queue_enabled') ? '✅' : '❌') . '<br>';
 echo 'DISABLE_WP_CRON: ' . (defined('DISABLE_WP_CRON') && DISABLE_WP_CRON ? '⚠️ YES — cron will NOT run on page loads' : 'No (normal)') . '<br>';
 echo 'Post interval: ' . get_option('wpbq_post_interval', 60) . ' minutes<br>';
-echo 'Daily limit: ' . get_option('wpbq_daily_limit', 10) . '<br>';
+echo 'Daily limit combined all platforms: ' . $today_count . ' / ' . get_option('wpbq_daily_limit', 10) . '<br>';
 echo '</p></div>';
     }
+
+
+    /**
+     * Count how many posts were made today
+     */
+    private static function get_todays_post_count() {
+        global $wpdb;
+        $table = $wpdb->prefix . 'bluesky_queue';
+
+        return intval($wpdb->get_var(
+            "SELECT COUNT(*) FROM $table
+             WHERE status = 'posted'
+             AND DATE(posted_at) = UTC_DATE()"
+        ));
+    }
+
 
     /**
      * IMPORT ARCHIVES PAGE
