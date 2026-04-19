@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: WP Bluedon Queue
- * Description: Manage and auto-post a queue of social media posts to Bluesky, including blog archive links.
- * Version: 1.2.2
+ * Description: Manage and auto-post a queue of social media posts to Bluesky & Mastodon, including blog archive links.
+ * Version: 1.2.5
  * Author: Brad & Claude
  * License: GPL v2 or later
  * Text Domain: wp-bluesky-queue
@@ -10,7 +10,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('WPBQ_VERSION', '1.2.2');
+define('WPBQ_VERSION', '1.2.5');
 define('WPBQ_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('WPBQ_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -143,7 +143,7 @@ function wpbq_admin_check_queue() {
     if ($hour < $start || $hour >= $end) return;
 
     // Check daily limit
-    $daily_limit = intval(get_option('wpbq_daily_limit', 10));
+    $daily_limit = intval(get_option('wpbq_daily_limit', 1));
     $today_count = WPBQ_Cron_Handler::get_today_post_count_public();
     if ($today_count >= $daily_limit) return;
     
@@ -164,7 +164,7 @@ function wpbq_admin_check_queue() {
     }
     
     // Check sequential queue with interval
-    $interval_minutes = intval(get_option('wpbq_post_interval', 60));
+    $interval_minutes = intval(get_option('wpbq_post_interval', 600));
     $last_posted = get_option('wpbq_last_posted_time', 0);
     
     if ((time() - $last_posted) >= ($interval_minutes * 60)) {

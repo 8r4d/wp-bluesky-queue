@@ -22,13 +22,13 @@ class WPBQ_Bluesky_API {
         $url = $this->pds_host . '/xrpc/com.atproto.server.createSession';
 
         // DEBUG: Log what we're sending (remove after debugging)
-        error_log('[WPBQ Debug] Attempting session creation...');
-        error_log('[WPBQ Debug] URL: ' . $url);
-        error_log('[WPBQ Debug] Handle: ' . $this->handle);
-        error_log('[WPBQ Debug] Password length: ' . strlen($this->app_password));
-        error_log('[WPBQ Debug] Password format check: ' . (preg_match('/^[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}$/', $this->app_password) ? 'Valid app password format' : 'NOT app password format'));
+        //error_log('[WPBQ Debug] Attempting session creation...');
+        //error_log('[WPBQ Debug] URL: ' . $url);
+        //error_log('[WPBQ Debug] Handle: ' . $this->handle);
+        //error_log('[WPBQ Debug] Password length: ' . strlen($this->app_password));
+        //error_log('[WPBQ Debug] Password format check: ' . (preg_match('/^[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}$/', $this->app_password) ? 'Valid app password format' : 'NOT app password format'));
         // Log the full record for debugging
-        error_log('[WPBQ Debug] Full record being sent: ' . wp_json_encode($args, JSON_PRETTY_PRINT));
+        //error_log('[WPBQ Debug] Full record being sent: ' . wp_json_encode($args, JSON_PRETTY_PRINT));
 
         $response = wp_remote_post($url, array(
             'headers' => array('Content-Type' => 'application/json'),
@@ -40,7 +40,7 @@ class WPBQ_Bluesky_API {
         ));
 
         if (is_wp_error($response)) {
-            error_log('[WPBQ Debug] WP_Error: ' . $response->get_error_message());
+            //error_log('[WPBQ Debug] WP_Error: ' . $response->get_error_message());
             return new WP_Error('session_failed', $response->get_error_message());
         }
 
@@ -48,8 +48,8 @@ class WPBQ_Bluesky_API {
         $code = wp_remote_retrieve_response_code($response);
 
         // DEBUG: Log the response
-        error_log('[WPBQ Debug] Response code: ' . $code);
-        error_log('[WPBQ Debug] Response body: ' . wp_remote_retrieve_body($response));
+        //error_log('[WPBQ Debug] Response code: ' . $code);
+        //error_log('[WPBQ Debug] Response body: ' . wp_remote_retrieve_body($response));
 
         if ($code !== 200 || empty($body['accessJwt'])) {
             $error_msg = isset($body['message']) ? $body['message'] : 'Unknown error';
@@ -279,8 +279,8 @@ class WPBQ_Bluesky_API {
             }
         }
 
-        error_log('[WPBQ Debug] Link card - Title: ' . $title);
-        error_log('[WPBQ Debug] Link card - Image URL being used: ' . $image);
+        //error_log('[WPBQ Debug] Link card - Title: ' . $title);
+        //error_log('[WPBQ Debug] Link card - Image URL being used: ' . $image);
 
         $card = array(
             'uri'         => $url,
@@ -296,10 +296,10 @@ class WPBQ_Bluesky_API {
                 if ($formatted !== null) {
                     $card['thumb'] = $formatted;
                 } else {
-                    error_log('[WPBQ Debug] Thumbnail skipped — blob format invalid');
+                    //error_log('[WPBQ Debug] Thumbnail skipped — blob format invalid');
                 }
             } else {
-                error_log('[WPBQ Debug] Thumbnail skipped — upload failed');
+                //error_log('[WPBQ Debug] Thumbnail skipped — upload failed');
             }
         }
 
@@ -352,11 +352,11 @@ class WPBQ_Bluesky_API {
             $formatted['size'] = intval($blob['size']);
         }
 
-        error_log('[WPBQ Debug] format_blob result: ' . wp_json_encode($formatted));
+        //error_log('[WPBQ Debug] format_blob result: ' . wp_json_encode($formatted));
 
         // Validate we have the minimum required fields
         if (empty($formatted['ref']['$link'])) {
-            error_log('[WPBQ Debug] format_blob FAILED — no ref.$link found in: ' . wp_json_encode($blob));
+            //error_log('[WPBQ Debug] format_blob FAILED — no ref.$link found in: ' . wp_json_encode($blob));
             return null;
         }
 
@@ -424,7 +424,7 @@ class WPBQ_Bluesky_API {
             return new WP_Error('not_an_image', 'Downloaded content is not a valid image');
         }
 
-        error_log('[WPBQ Debug] Image size before compression: ' . strlen($body) . ' bytes');
+        //error_log('[WPBQ Debug] Image size before compression: ' . strlen($body) . ' bytes');
 
         // ALWAYS run through compression/resize to be safe
         // This ensures we're under 1MB and in a format Bluesky likes
@@ -435,7 +435,7 @@ class WPBQ_Bluesky_API {
                 $width  = imagesx($img);
                 $height = imagesy($img);
 
-                error_log('[WPBQ Debug] Image dimensions: ' . $width . 'x' . $height);
+                //error_log('[WPBQ Debug] Image dimensions: ' . $width . 'x' . $height);
 
                 // Scale down if wider/taller than 1200px OR if file is over 1MB
                 $max_dimension = 1200;
@@ -451,7 +451,7 @@ class WPBQ_Bluesky_API {
                     imagedestroy($img);
                     $img = $resized;
 
-                    error_log('[WPBQ Debug] Resized to: ' . $new_w . 'x' . $new_h);
+                    //error_log('[WPBQ Debug] Resized to: ' . $new_w . 'x' . $new_h);
                 }
 
                 // Encode as JPEG — try decreasing quality until under 1MB
@@ -461,26 +461,26 @@ class WPBQ_Bluesky_API {
                     imagejpeg($img, null, $quality);
                     $body = ob_get_clean();
                     $quality -= 10;
-                    error_log('[WPBQ Debug] Compressed at quality ' . ($quality + 10) . ': ' . strlen($body) . ' bytes');
+                    //error_log('[WPBQ Debug] Compressed at quality ' . ($quality + 10) . ': ' . strlen($body) . ' bytes');
                 } while (strlen($body) > 1000000 && $quality >= 30);
 
                 imagedestroy($img);
                 $content_type = 'image/jpeg'; // We converted to JPEG
 
                 if (strlen($body) > 1000000) {
-                    error_log('[WPBQ Debug] Image still too large after compression');
+                    //error_log('[WPBQ Debug] Image still too large after compression');
                     return new WP_Error('image_too_large', 'Image exceeds 1MB even after compression');
                 }
 
-                error_log('[WPBQ Debug] Final image size: ' . strlen($body) . ' bytes');
+                //error_log('[WPBQ Debug] Final image size: ' . strlen($body) . ' bytes');
             } else {
-                error_log('[WPBQ Debug] imagecreatefromstring() failed');
+                //error_log('[WPBQ Debug] imagecreatefromstring() failed');
                 if (strlen($body) > 1000000) {
                     return new WP_Error('image_too_large', 'Image exceeds 1MB and GD could not process it');
                 }
             }
         } else {
-            error_log('[WPBQ Debug] GD library not available');
+            //error_log('[WPBQ Debug] GD library not available');
             if (strlen($body) > 1000000) {
                 return new WP_Error('image_too_large', 'Image exceeds 1MB and GD is not available for compression');
             }
@@ -504,7 +504,7 @@ class WPBQ_Bluesky_API {
 
         $result = json_decode(wp_remote_retrieve_body($response), true);
 
-        error_log('[WPBQ Debug] Upload response: ' . wp_remote_retrieve_body($response));
+        //error_log('[WPBQ Debug] Upload response: ' . wp_remote_retrieve_body($response));
 
         return isset($result['blob']) ? $result['blob'] : new WP_Error('upload_failed', 'Blob upload failed');
     }

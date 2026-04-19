@@ -167,6 +167,7 @@ class WPBQ_Admin_Page {
         register_setting($group, 'wpbq_queue_enabled', 'absint');
         register_setting($group, 'wpbq_random_enabled', 'absint');
         register_setting($group, 'wpbq_post_interval', 'absint');
+        register_setting($group, 'wpbq_post_seed', 'absint');
         register_setting($group, 'wpbq_daily_limit', 'absint');
         register_setting($group, 'wpbq_posting_start_hour', 'absint');
         register_setting($group, 'wpbq_posting_end_hour', 'absint');
@@ -559,7 +560,7 @@ echo '</p></div>';
                     <?php else : ?>
                         <?php foreach ($logs as $log) : ?>
                             <tr>
-                                <td><?php echo esc_html(date('M j, g:ia', strtotime($log->created_at))); ?></td>
+                                <td><?php echo esc_html( wp_date( 'M j, g:ia', strtotime( $log->created_at ) ) ); ?></td>
                                 <td>#<?php echo esc_html($log->queue_id); ?></td>
                                 <td>
                                     <span class="wpbq-log-action wpbq-log-<?php echo esc_attr($log->action); ?>">
@@ -734,6 +735,13 @@ echo '</p></div>';
                         <td>
                             <input type="number" name="wpbq_post_interval" value="<?php echo esc_attr(get_option('wpbq_post_interval', 60)); ?>" min="5" max="1440">
                             <p class="description">Minimum minutes between sequential queue posts</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Post Randomness Seed</th>
+                        <td>
+                            <input type="number" name="wpbq_post_seed" value="<?php echo esc_attr(get_option('wpbq_post_seed', 10)); ?>" min="1" max="500">
+                            <p class="description">Seed for random post selection</p>
                         </td>
                     </tr>
                     <tr>
