@@ -25,7 +25,7 @@ class WPBQ_Cron_Handler {
         
         $enabled = get_option('wpbq_queue_enabled', false);
         if (!$enabled) {
-            error_log('[WPBQ Cron] STOPPED: Queue not enabled');
+            //error_log('[WPBQ Cron] STOPPED: Queue not enabled');
             return;
         }
 
@@ -40,14 +40,14 @@ class WPBQ_Cron_Handler {
         }
 
         if (!self::is_within_posting_hours()) {
-            error_log('[WPBQ Cron] STOPPED: Outside posting hours. Hour: ' . current_time('G'));
+            //error_log('[WPBQ Cron] STOPPED: Outside posting hours. Hour: ' . current_time('G'));
             return;
         }
 
         $daily_limit = intval(get_option('wpbq_daily_limit', 10));
         $today_count = self::get_today_post_count();
         if ($today_count >= $daily_limit) {
-            error_log('[WPBQ Cron] STOPPED: Daily limit reached. Count: ' . $today_count . ' / ' . $daily_limit);
+            //error_log('[WPBQ Cron] STOPPED: Daily limit reached. Count: ' . $today_count . ' / ' . $daily_limit);
             return;
         }
 
@@ -61,7 +61,7 @@ class WPBQ_Cron_Handler {
         $elapsed = time() - $last_posted;
         $needed = $flex + ($interval_minutes * 60); // Total needed time is base interval + random flex
 
-        error_log('[WPBQ Cron] Interval: ' . $interval_minutes . 'min. Elapsed: ' . $elapsed . 's. Needed: ' . $needed . 's.');
+        //error_log('[WPBQ Cron] Interval: ' . $interval_minutes . 'min. Elapsed: ' . $elapsed . 's. Needed: ' . $needed . 's.');
 
         if ($elapsed >= $needed) {
             $next = WPBQ_Queue_Manager::get_next_in_queue();
@@ -69,10 +69,10 @@ class WPBQ_Cron_Handler {
                 error_log('[WPBQ Cron] Found sequential item #' . $next->id . ' — posting');
                 self::post_queue_item($next);
             } else {
-                error_log('[WPBQ Cron] No sequential items in queue');
+                //error_log('[WPBQ Cron] No sequential items in queue');
             }
         } else {
-            error_log('[WPBQ Cron] STOPPED: Interval not reached. ' . ($needed - $elapsed) . 's remaining');
+            //error_log('[WPBQ Cron] STOPPED: Interval not reached. ' . ($needed - $elapsed) . 's remaining');
         }
 
         //error_log('[WPBQ Cron] === process_scheduled_queue ENDED ===');
