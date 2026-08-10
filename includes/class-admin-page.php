@@ -736,6 +736,47 @@ echo '</p></div>';
                                 </tr>
                             </table>
 
+                <h2>🚀 Auto-Queue on Publish</h2>
+                    <table class="form-table">
+                        <tr>
+                            <th>Enable Auto-Queue</th>
+                            <td>
+                                <label>
+                                    <input type="checkbox" name="wpbq_auto_queue_enabled" value="1"
+                                        <?php checked(get_option('wpbq_auto_queue_enabled'), 1); ?>>
+                                    Automatically add new posts to the queue when published
+                                </label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Post Types</th>
+                            <td>
+                                <?php
+                                $selected_types = get_option('wpbq_auto_queue_post_types', array('post'));
+                                if (!is_array($selected_types)) $selected_types = array('post');
+                                $types = get_post_types(array('public' => true), 'objects');
+                                foreach ($types as $type) {
+                                    if ($type->name === 'attachment') continue;
+                                    printf(
+                                        '<label style="display:inline-block;margin-right:15px;"><input type="checkbox" name="wpbq_auto_queue_post_types[]" value="%s" %s> %s</label>',
+                                        esc_attr($type->name),
+                                        checked(in_array($type->name, $selected_types, true), true, false),
+                                        esc_html($type->label)
+                                    );
+                                }
+                                ?>
+                                <p class="description">Which post types should be auto-queued on publish.</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Delay Before Posting (minutes)</th>
+                            <td>
+                                <input type="number" name="wpbq_auto_queue_delay" value="<?php echo esc_attr(get_option('wpbq_auto_queue_delay', 0)); ?>" min="0" max="10080">
+                                <p class="description">0 = added to the sequential queue immediately. Otherwise, scheduled that many minutes out.</p>
+                            </td>
+                        </tr>
+                    </table>
+
                 <h2>📅 Scheduled Queue Posting</h2>
                 <table class="form-table">
                     <tr>
