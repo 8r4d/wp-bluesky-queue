@@ -351,6 +351,14 @@ if (isset($_POST['wpbq_run_cron']) && wp_verify_nonce($_POST['_wpnonce'], 'wpbq_
                             </td>
                         </tr>
                         <tr>
+                            <th><label for="image_url">Image URL</label></th>
+                            <td>
+                                <input type="url" id="image_url" name="image_url" class="regular-text"
+                                    placeholder="https://yourblog.com/wp-content/uploads/...">
+                                <p class="description">Optional: Attaches an image to the post (Bluesky &amp; Mastodon)</p>
+                            </td>
+                        </tr>
+                        <tr>
                             <th><label for="blog_post_select">Or Select Blog Post</label></th>
                             <td>
                                 <select id="blog_post_select" name="blog_post_id">
@@ -358,10 +366,12 @@ if (isset($_POST['wpbq_run_cron']) && wp_verify_nonce($_POST['_wpnonce'], 'wpbq_
                                     <?php
                                     $recent = get_posts(array('numberposts' => 50, 'post_status' => 'publish'));
                                     foreach ($recent as $p) {
-                                        printf('<option value="%d" data-url="%s" data-title="%s">%s (%s)</option>',
+                                        $thumb_url = get_the_post_thumbnail_url($p->ID, 'medium_large') ?: '';
+                                        printf('<option value="%d" data-url="%s" data-title="%s" data-image="%s">%s (%s)</option>',
                                             $p->ID,
                                             esc_attr(get_permalink($p->ID)),
                                             esc_attr($p->post_title),
+                                            esc_attr($thumb_url),
                                             esc_html($p->post_title),
                                             get_the_date('M j, Y', $p->ID)
                                         );
@@ -888,6 +898,7 @@ echo '</p></div>';
             'post_text'    => sanitize_textarea_field(wp_unslash($_POST['post_text'])),
             'blog_post_id' => absint($_POST['blog_post_id'] ?? 0),
             'link_url'     => esc_url_raw(wp_unslash($_POST['link_url'] ?? '')),
+            'image_url'    => esc_url_raw(wp_unslash($_POST['image_url'] ?? '')),   
             'scheduled_at' => !empty($_POST['scheduled_at']) 
                 ? get_gmt_from_date(sanitize_text_field(wp_unslash($_POST['scheduled_at']))) 
                 : null,

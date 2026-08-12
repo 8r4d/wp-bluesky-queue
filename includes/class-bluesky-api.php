@@ -104,14 +104,36 @@ class WPBQ_Bluesky_API {
             $record['facets'] = $facets;
         }
 
-        // Add link card embed if URL provided
-        if (!empty($link_url)) {
+        // Add embed: prefer a real image attachment; fall back to link card
+        if (!empty($image_url)) {
+            $blob = $this->upload_image($image_url);
+            if (!is_wp_error($blob)) {
+                $formatted = $this->format_blob($blob);
+                if ($formatted !== null) {
+                    $record['embed'] = array(
+                        '$type'  => 'app.bsky.embed.images',
+                        'images' => array(
+                            array(
+                                'image' => $formatted,
+                                'alt'   => '',
+                            ),
+                        ),
+                    );
+                }
+            } else {
+                error_log('[WPBQ] Image upload failed: ' . $blob->get_error_message());
+            }
+        }
+
+        if (!isset($record['embed']) && !empty($link_url)) {
             $card = $this->fetch_link_card($link_url, $image_url);
             if (!is_wp_error($card)) {
                 $record['embed'] = array(
                     '$type'    => 'app.bsky.embed.external',
                     'external' => $card,
                 );
+            } else {
+                error_log('[WPBQ] Link card fetch failed: ' . $card->get_error_message());
             }
         }
 

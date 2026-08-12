@@ -24,22 +24,22 @@
         var $selected = $('#blog_post_select option:selected');
         var title = $selected.data('title');
         var url = $selected.data('url');
+        var image = $selected.data('image');
 
         if (!title) {
             alert('Please select a blog post first.');
             return;
         }
 
-        // Use the template pattern or a simple default
         var text = '📝 ' + title + '\n\n🔗 ' + url;
 
-        // Truncate if needed
         if (text.length > 300) {
             text = text.substring(0, 297) + '...';
         }
 
         $('#post_text').val(text).trigger('input');
         $('#link_url').val(url);
+        $('#image_url').val(image || '');
     });
 
     // =====================
@@ -57,6 +57,7 @@
             nonce: wpbq.nonce,
             post_text: $('#post_text').val(),
             link_url: $('#link_url').val(),
+            image_url: $('#image_url').val(),
             blog_post_id: $('#blog_post_select').val() || 0,
             scheduled_at: $('#scheduled_at').val() || ''
         };
