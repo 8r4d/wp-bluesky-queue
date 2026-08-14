@@ -221,7 +221,7 @@ class WPBQ_Admin_Page {
                     📋 Queued: <strong><?php echo $counts['queued']; ?></strong>
                 </a>
                 <a href="?page=wpbq-queue&status=posted" class="wpbq-stat <?php echo $status === 'posted' ? 'active' : ''; ?>">
-                    ✅ Posted: <strong><?php echo $counts['posted']; ?></strong>
+                    ✅ Posted (Last <?php echo esc_attr(get_option('wpbq_retention_days', 30)); ?> Days): <strong><?php echo $counts['posted']; ?></strong>
                 </a>
                 <a href="?page=wpbq-queue&status=failed" class="wpbq-stat <?php echo $status === 'failed' ? 'active' : ''; ?>">
                     ❌ Failed: <strong><?php echo $counts['failed']; ?></strong>
