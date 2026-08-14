@@ -1,4 +1,4 @@
-This plugin is pretty rough around the edges and I've left some of debugging output on but I got it to work on multiple Wordpress 6.9 sites. 
+This plugin is pretty rough around the edges and I've left some of debugging output on but I got it to work on multiple Wordpress 7.1 sites. 
 
 Zip the files, keeping the structure, upload as a plugin and activate. Voila!
 
