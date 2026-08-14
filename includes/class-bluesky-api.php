@@ -98,14 +98,24 @@ class WPBQ_Bluesky_API {
             'langs'     => array('en'),
         );
 
-        // Parse and add facets (links, mentions, hashtags)
-        $facets = $this->parse_facets($text);
-        if (!empty($facets)) {
-            $record['facets'] = $facets;
+        // Add embed: prefer a link card (using the image as its thumbnail) when a
+        // link is present, since Bluesky only supports one embed per post and a
+        // card is more useful than a bare photo for shared blog posts. Fall back
+        // to a standalone image embed when there's no link, or when the card
+        // fetch fails.
+        if (!empty($link_url)) {
+            $card = $this->fetch_link_card($link_url, $image_url);
+            if (!is_wp_error($card)) {
+                $record['embed'] = array(
+                    '$type'    => 'app.bsky.embed.external',
+                    'external' => $card,
+                );
+            } else {
+                error_log('[WPBQ] Link card fetch failed: ' . $card->get_error_message());
+            }
         }
 
-        // Add embed: prefer a real image attachment; fall back to link card
-        if (!empty($image_url)) {
+        if (!isset($record['embed']) && !empty($image_url)) {
             $blob = $this->upload_image($image_url);
             if (!is_wp_error($blob)) {
                 $formatted = $this->format_blob($blob);
@@ -125,16 +135,26 @@ class WPBQ_Bluesky_API {
             }
         }
 
-        if (!isset($record['embed']) && !empty($link_url)) {
-            $card = $this->fetch_link_card($link_url, $image_url);
-            if (!is_wp_error($card)) {
-                $record['embed'] = array(
-                    '$type'    => 'app.bsky.embed.external',
-                    'external' => $card,
-                );
+        // Safety net: if we still have a link_url but no embed was attached
+        // (e.g. the link-card fetch failed and there was no image to fall back
+        // on, or the image upload also failed), make sure the URL still shows
+        // up somewhere in the post text so it isn't silently dropped.
+        if (!isset($record['embed']) && !empty($link_url) && strpos($text, $link_url) === false) {
+            $remaining = 300 - mb_strlen($text) - 2; // 300 char limit
+            if ($remaining >= mb_strlen($link_url)) {
+                $text .= "\n\n" . $link_url;
             } else {
-                error_log('[WPBQ] Link card fetch failed: ' . $card->get_error_message());
+                $trim_to = max(0, 300 - mb_strlen($link_url) - 6);
+                $text = mb_substr($text, 0, $trim_to) . '... ' . $link_url;
             }
+            $record['text'] = $text;
+        }
+
+        // Parse and add facets (links, mentions, hashtags) — done after the
+        // safety-net text append above so a fallback link still gets a facet
+        $facets = $this->parse_facets($text);
+        if (!empty($facets)) {
+            $record['facets'] = $facets;
         }
 
         // Send to Bluesky
