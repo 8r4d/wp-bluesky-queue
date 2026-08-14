@@ -6,6 +6,10 @@ Add and save app credentials from both Bluesky and Mastodon in the settings page
 
 You can import old posts into a queue that will fire based on a wp-cron to post simultaneously to both social networks as per the settings or set up a randomizer that will randomly post from the queue at a possibility percentage each time the 5 minute cron is activated (ie after 1 hour, a post has a x% chance of being sent at each 5 minute cron increment). 
 
-You can schedule manual posts written using the queue page.
+You can format posts, include hashtags, and automatically generate hashtags from metadata in the posts.
+
+You can schedule manually written posts written using the queue page that include text, a link, a published post, or an image to be embedded into the post and delievered at a scheduled date and time.
+
+You can set the archive window for retaining posting history (default 30 days.)
 
 Feel free to use this for non-commercial projects, fork it and improve it. It was mostly vibe-coded using Claude because I didn't have the time and energy to spend too much time making this, so I'm not claiming too much credit or offering any support whatsoever.
