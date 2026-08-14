@@ -183,6 +183,7 @@ class WPBQ_Admin_Page {
         register_setting($group, 'wpbq_auto_queue_enabled', 'absint');
         register_setting($group, 'wpbq_auto_queue_post_types');
         register_setting($group, 'wpbq_auto_queue_delay', 'absint');
+        register_setting($group, 'wpbq_retention_days', 'absint');
     }
 
     public function enqueue_assets($hook) {
@@ -826,6 +827,13 @@ echo '</p></div>';
                             <p class="description">Posts will only go out during these hours (site timezone)</p>
                         </td>
                     </tr>
+                    <tr>
+                        <th>Delete Old Items After</th>
+                        <td>
+                            <input type="number" name="wpbq_retention_days" value="<?php echo esc_attr(get_option('wpbq_retention_days', 30)); ?>" min="0" max="365"> days
+                            <p class="description">Posted/failed queue items older than this get auto-deleted. 0 = never delete.</p>
+                        </td>
+                    </tr>
                 </table>
 
                 <h2>🎲 Added Random Posting</h2>
@@ -863,6 +871,8 @@ echo '</p></div>';
                         </td>
                     </tr>
                 </table>
+
+                
 
                 <?php submit_button(); ?>
             </form>
@@ -1019,5 +1029,17 @@ echo '</p></div>';
 
         $name = isset($result['display_name']) ? $result['display_name'] : $result['username'];
         wp_send_json_success('✅ Connected as ' . $name . ' (@' . $result['username'] . ')');
+    }
+
+
+    public function ajax_cleanup_now() {
+        check_ajax_referer('wpbq_nonce', 'nonce');
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+
+        $days = intval($_POST['days'] ?? 30);
+        $deleted = WPBQ_Queue_Manager::cleanup_old_items($days);
+        WPBQ_Queue_Manager::log(0, 'cleanup', "Manually deleted $deleted old queue item(s)");
+
+        wp_send_json_success("Deleted $deleted item(s).");
     }
 }

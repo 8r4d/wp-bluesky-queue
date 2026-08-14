@@ -22,7 +22,7 @@ class WPBQ_Cron_Handler {
      */
     public static function process_scheduled_queue() {
         //error_log('[WPBQ Cron] === process_scheduled_queue STARTED ===');
-        
+        self::maybe_cleanup_old_items();
         $enabled = get_option('wpbq_queue_enabled', false);
         if (!$enabled) {
             //error_log('[WPBQ Cron] STOPPED: Queue not enabled');
@@ -76,6 +76,19 @@ class WPBQ_Cron_Handler {
         }
 
         //error_log('[WPBQ Cron] === process_scheduled_queue ENDED ===');
+    }
+
+    private static function maybe_cleanup_old_items() {
+        if (get_transient('wpbq_last_cleanup')) return;
+        set_transient('wpbq_last_cleanup', true, DAY_IN_SECONDS);
+
+        $days = intval(get_option('wpbq_retention_days', 30));
+        if ($days > 0) {
+            $deleted = WPBQ_Queue_Manager::cleanup_old_items($days);
+            if ($deleted) {
+                WPBQ_Queue_Manager::log(0, 'cleanup', "Auto-deleted $deleted old queue item(s) past retention period");
+            }
+        }
     }
 
     /**

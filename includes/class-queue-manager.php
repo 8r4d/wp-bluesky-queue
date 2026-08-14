@@ -16,6 +16,28 @@ class WPBQ_Queue_Manager {
     }
 
     /**
+     * Delete old posted/failed items past retention period
+     */
+    public static function cleanup_old_items($days = 30, $statuses = array('posted', 'failed')) {
+        global $wpdb;
+        self::init();
+
+        if ($days <= 0) return 0;
+
+        $cutoff = gmdate('Y-m-d H:i:s', time() - ($days * DAY_IN_SECONDS));
+        $placeholders = implode(',', array_fill(0, count($statuses), '%s'));
+
+        $sql = $wpdb->prepare(
+            "DELETE FROM " . self::$table_name . "
+            WHERE status IN ($placeholders)
+            AND created_at < %s",
+            array_merge($statuses, array($cutoff))
+        );
+
+        return $wpdb->query($sql);
+    }
+
+    /**
      * Add an item to the queue
      */
     public static function add_to_queue($data) {
