@@ -288,6 +288,140 @@ class WPBQ_Queue_Manager {
         return $imported;
     }
 
+
+    /**
+     * Pick a random eligible archive post to "revive" into the queue.
+     *
+     * Eligible = published, of an allowed post type, older than $min_age_days,
+     * not currently sitting in the queue, and not posted within the last
+     * $cooldown_days (so we don't repeat the same post too often).
+     */
+    public static function get_revival_candidate($min_age_days, $cooldown_days, $post_types) {
+        global $wpdb;
+        self::init();
+ 
+        if (empty($post_types) || !is_array($post_types)) {
+            $post_types = array('post');
+        }
+ 
+        $cutoff_date = gmdate('Y-m-d H:i:s', time() - (intval($min_age_days) * DAY_IN_SECONDS));
+ 
+        // Never revive a post that's currently sitting in the queue
+        $currently_queued = $wpdb->get_col(
+            "SELECT DISTINCT blog_post_id FROM " . self::$table_name . "
+             WHERE blog_post_id > 0 AND status = 'queued'"
+        );
+ 
+        // Don't revive a post that was posted recently (cooldown window)
+        $cooldown_cutoff = gmdate('Y-m-d H:i:s', time() - (intval($cooldown_days) * DAY_IN_SECONDS));
+        $recently_posted = $wpdb->get_col($wpdb->prepare(
+            "SELECT DISTINCT blog_post_id FROM " . self::$table_name . "
+             WHERE blog_post_id > 0 AND status = 'posted' AND posted_at >= %s",
+            $cooldown_cutoff
+        ));
+ 
+        $exclude = array_unique(array_merge(
+            array_map('intval', $currently_queued),
+            array_map('intval', $recently_posted)
+        ));
+        $exclude = array_filter($exclude);
+ 
+        $args = array(
+            'post_type'      => $post_types,
+            'post_status'    => 'publish',
+            'posts_per_page' => 1,
+            'orderby'        => 'rand',
+            'date_query'     => array(
+                array(
+                    'before'    => $cutoff_date,
+                    'inclusive' => true,
+                    'column'    => 'post_date_gmt',
+                ),
+            ),
+        );
+ 
+        if (!empty($exclude)) {
+            $args['post__not_in'] = array_values($exclude);
+        }
+ 
+        $candidates = get_posts($args);
+ 
+        return !empty($candidates) ? $candidates[0] : null;
+    }
+ 
+    /**
+     * Build post_text / link / image data for a WP_Post the same way
+     * import_blog_archives() does, so revived posts look consistent
+     * with manually imported ones.
+     */
+    public static function build_post_data_from_post($post) {
+        $title = $post->post_title;
+        $url   = get_permalink($post->ID);
+ 
+        if (has_excerpt($post->ID)) {
+            $excerpt = get_the_excerpt($post->ID);
+        } else {
+            $clean_content = strip_shortcodes($post->post_content);
+            $clean_content = wp_strip_all_tags($clean_content);
+            $excerpt = wp_trim_words($clean_content, 20, '...');
+        }
+        $excerpt = strip_shortcodes($excerpt);
+ 
+        $template = get_option('wpbq_post_template', "📝 {title}\n\n{excerpt}\n\n🔗 {url}");
+        $text = str_replace(
+            array('{title}', '{excerpt}', '{url}'),
+            array($title, $excerpt, $url),
+            $template
+        );
+ 
+        $hashtags = self::generate_hashtags($post->ID);
+        if (!empty($hashtags)) {
+            $full_text = $text . "\n\n" . $hashtags;
+            if (mb_strlen($full_text) <= 300) {
+                $text = $full_text;
+            } else {
+                $text = self::fit_text_with_hashtags($template, $title, $excerpt, $url, $post->ID);
+            }
+        }
+ 
+        if (mb_strlen($text) > 300) {
+            $text = mb_substr($text, 0, 297) . '...';
+        }
+ 
+        $thumb_id  = get_post_thumbnail_id($post->ID);
+        $image_url = '';
+        if ($thumb_id) {
+            $image_url = wp_get_attachment_image_url($thumb_id, 'medium_large');
+            if (!$image_url) {
+                $image_url = wp_get_attachment_image_url($thumb_id, 'large');
+            }
+        }
+ 
+        return array(
+            'text'      => $text,
+            'url'       => $url,
+            'image_url' => $image_url ?: '',
+        );
+    }
+ 
+    /**
+     * How many posts have been revived from the archive today (UTC)
+     */
+    public static function get_today_revival_count() {
+        global $wpdb;
+        self::init();
+ 
+        return intval($wpdb->get_var(
+            "SELECT COUNT(*) FROM " . self::$log_table . "
+             WHERE action = 'revived'
+             AND DATE(created_at) = UTC_DATE()"
+        ));
+    }
+
+
+
+
+
     /**
      * Log an action
      */

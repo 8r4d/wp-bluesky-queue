@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP Bluedon Queue
  * Description: Manage and auto-post a queue of social media posts to Bluesky & Mastodon, including blog archive links.
- * Version: 1.5.1
+ * Version: 1.6.0
  * Author: Brad Salomons
  * License: GPL v2 or later
  * Text Domain: wp-bluesky-queue
@@ -10,7 +10,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('WPBQ_VERSION', '1.5.1');
+define('WPBQ_VERSION', '1.6.0');
 define('WPBQ_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('WPBQ_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -25,7 +25,8 @@ require_once WPBQ_PLUGIN_DIR . 'includes/class-auto-queue.php';
 // Hook cron actions immediately — don't wait for plugins_loaded
 add_action('wpbq_process_queue', array('WPBQ_Cron_Handler', 'process_scheduled_queue'));
 add_action('wpbq_random_post', array('WPBQ_Cron_Handler', 'process_random_post'));
-
+add_action('wpbq_revival_check', array('WPBQ_Cron_Handler', 'process_revival_check'));
+ 
 /**
  * Activation: create custom database table and schedule cron
  */
@@ -74,6 +75,9 @@ function wpbq_activate() {
     if (!wp_next_scheduled('wpbq_random_post')) {
         wp_schedule_event(time(), 'hourly', 'wpbq_random_post');
     }
+    if (!wp_next_scheduled('wpbq_revival_check')) {
+        wp_schedule_event(time(), 'hourly', 'wpbq_revival_check');
+    }
 
     update_option('wpbq_db_version', WPBQ_VERSION);
 }
@@ -85,6 +89,7 @@ register_activation_hook(__FILE__, 'wpbq_activate');
 function wpbq_deactivate() {
     wp_clear_scheduled_hook('wpbq_process_queue');
     wp_clear_scheduled_hook('wpbq_random_post');
+    wp_clear_scheduled_hook('wpbq_revival_check');
 }
 register_deactivation_hook(__FILE__, 'wpbq_deactivate');
 
@@ -106,12 +111,16 @@ add_filter('cron_schedules', 'wpbq_cron_intervals');
 function wpbq_init() {
     add_action('wpbq_process_queue', array('WPBQ_Cron_Handler', 'process_scheduled_queue'));
     add_action('wpbq_random_post', array('WPBQ_Cron_Handler', 'process_random_post'));
+    add_action('wpbq_revival_check', array('WPBQ_Cron_Handler', 'process_revival_check'));
 
     if (!wp_next_scheduled('wpbq_process_queue')) {
         wp_schedule_event(time(), 'five_minutes', 'wpbq_process_queue');
     }
     if (!wp_next_scheduled('wpbq_random_post')) {
         wp_schedule_event(time(), 'hourly', 'wpbq_random_post');
+    }
+   if (!wp_next_scheduled('wpbq_revival_check')) {
+        wp_schedule_event(time(), 'hourly', 'wpbq_revival_check');
     }
 
     if (class_exists('WPBQ_Auto_Queue')) {

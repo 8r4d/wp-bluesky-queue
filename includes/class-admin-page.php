@@ -184,6 +184,14 @@ class WPBQ_Admin_Page {
         register_setting($group, 'wpbq_auto_queue_post_types');
         register_setting($group, 'wpbq_auto_queue_delay', 'absint');
         register_setting($group, 'wpbq_retention_days', 'absint');
+
+        // Revive old posts
+        register_setting($group, 'wpbq_revival_enabled', 'absint');
+        register_setting($group, 'wpbq_revival_probability', 'absint');
+        register_setting($group, 'wpbq_revival_daily_max', 'absint');
+        register_setting($group, 'wpbq_revival_min_age_days', 'absint');
+        register_setting($group, 'wpbq_revival_cooldown_days', 'absint');
+        register_setting($group, 'wpbq_revival_post_types');
     }
 
     public function enqueue_assets($hook) {
@@ -787,6 +795,81 @@ echo '</p></div>';
                             </td>
                         </tr>
                     </table>
+
+   <h2>♻️ Revive Old Posts</h2>
+                    <table class="form-table">
+                        <tr>
+                            <th>Enable Revival</th>
+                            <td>
+                                <label>
+                                    <input type="checkbox" name="wpbq_revival_enabled" value="1"
+                                        <?php checked(get_option('wpbq_revival_enabled'), 1); ?>>
+                                    Occasionally pull an old archive post back into the queue
+                                </label>
+                                <p class="description">Checked every hour. When it fires, one eligible old post is added to the <strong>sequential queue</strong> — it still posts through your normal interval/daily-limit/posting-hours settings above, it just seeds a candidate in.</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Chance Per Hourly Check</th>
+                            <td>
+                                <input type="number" name="wpbq_revival_probability" value="<?php echo esc_attr(get_option('wpbq_revival_probability', 15)); ?>" min="1" max="100">%
+                                <p class="description">Each hour, this is the chance an old post gets revived into the queue (subject to the daily cap below).</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Max Revivals Per Day</th>
+                            <td>
+                                <input type="number" name="wpbq_revival_daily_max" value="<?php echo esc_attr(get_option('wpbq_revival_daily_max', 1)); ?>" min="1" max="20">
+                                <p class="description">Caps how many old posts can be added to the queue this way per day, separate from your overall daily posting limit.</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Minimum Post Age</th>
+                            <td>
+                                <input type="number" name="wpbq_revival_min_age_days" value="<?php echo esc_attr(get_option('wpbq_revival_min_age_days', 180)); ?>" min="1" max="3650">
+                                days
+                                <p class="description">Only posts published at least this many days ago are eligible.</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Cooldown Before Re-Reviving</th>
+                            <td>
+                                <input type="number" name="wpbq_revival_cooldown_days" value="<?php echo esc_attr(get_option('wpbq_revival_cooldown_days', 60)); ?>" min="1" max="3650">
+                                days
+                                <p class="description">A post that's already been posted (via revival, import, or auto-queue) won't be picked again until this many days have passed.</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Eligible Post Types</th>
+                            <td>
+                                <?php
+                                $revival_types = get_option('wpbq_revival_post_types', array('post'));
+                                if (!is_array($revival_types)) $revival_types = array('post');
+                                $types = get_post_types(array('public' => true), 'objects');
+                                foreach ($types as $type) {
+                                    if ($type->name === 'attachment') continue;
+                                    printf(
+                                        '<label style="display:inline-block;margin-right:15px;"><input type="checkbox" name="wpbq_revival_post_types[]" value="%s" %s> %s</label>',
+                                        esc_attr($type->name),
+                                        checked(in_array($type->name, $revival_types, true), true, false),
+                                        esc_html($type->label)
+                                    );
+                                }
+                                ?>
+                                <p class="description">Which post types are eligible to be revived.</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Revived Today</th>
+                            <td>
+                                <?php echo intval(WPBQ_Queue_Manager::get_today_revival_count()); ?> / <?php echo intval(get_option('wpbq_revival_daily_max', 1)); ?>
+                            </td>
+                        </tr>
+                    </table>
+ 
+
+
+
 
                 <h2>📅 Scheduled Queue Posting</h2>
                 <table class="form-table">

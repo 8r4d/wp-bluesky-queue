@@ -114,6 +114,53 @@ class WPBQ_Cron_Handler {
         }
     }
 
+
+    /**
+     * Randomly revive an old archive post into the queue (runs hourly).
+     * This only ever ADDS a candidate to the sequential queue — it does not
+     * post anything itself. Posting still goes through the normal
+     * process_scheduled_queue()/process_random_post() flow, so daily limits
+     * and posting hours are respected exactly as they are today.
+     */
+    public static function process_revival_check() {
+        $enabled = get_option('wpbq_revival_enabled', false);
+        if (!$enabled) return;
+ 
+        $daily_max     = intval(get_option('wpbq_revival_daily_max', 1));
+        $today_revived = WPBQ_Queue_Manager::get_today_revival_count();
+        if ($today_revived >= $daily_max) return;
+ 
+        $probability = intval(get_option('wpbq_revival_probability', 15));
+        if (wp_rand(1, 100) > $probability) return;
+ 
+        $min_age_days  = intval(get_option('wpbq_revival_min_age_days', 180));
+        $cooldown_days = intval(get_option('wpbq_revival_cooldown_days', 60));
+        $post_types    = get_option('wpbq_revival_post_types', array('post'));
+        if (!is_array($post_types)) $post_types = array('post');
+ 
+        $post = WPBQ_Queue_Manager::get_revival_candidate($min_age_days, $cooldown_days, $post_types);
+        if (!$post) return;
+ 
+        $data = WPBQ_Queue_Manager::build_post_data_from_post($post);
+ 
+        $queue_id = WPBQ_Queue_Manager::add_to_queue(array(
+            'post_text'    => $data['text'],
+            'blog_post_id' => $post->ID,
+            'link_url'     => $data['url'],
+            'image_url'    => $data['image_url'],
+            'status'       => 'queued',
+        ));
+ 
+        if ($queue_id) {
+            WPBQ_Queue_Manager::log(
+                $queue_id,
+                'revived',
+                'Revived archive post: "' . $post->post_title . '" (Post #' . $post->ID . ', published ' . get_the_date('Y-m-d', $post) . ')'
+            );
+        }
+    }
+
+
     /**
      * Post a specific queue item to Bluesky
      */
