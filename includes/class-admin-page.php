@@ -978,12 +978,12 @@ if (isset($_POST['wpbq_run_cron']) && wp_verify_nonce($_POST['_wpnonce'], 'wpbq_
                                 <p class="description">Which post types are eligible to be revived.</p>
                             </td>
                         </tr>
-                        <tr>
+                        <!--<tr>
                             <th>Revived Today</th>
                             <td>
                                 <?php echo intval(WPBQ_Queue_Manager::get_today_revival_count()); ?> / <?php echo intval(get_option('wpbq_revival_daily_max', 1)); ?>
                             </td>
-                        </tr>
+                        </tr>-->
                     </table>
                 </div>
 
@@ -1100,6 +1100,12 @@ if (isset($_POST['wpbq_run_cron']) && wp_verify_nonce($_POST['_wpnonce'], 'wpbq_
                     <table class="form-table">
 
                         <?php $this->render_cron_status_table(); ?>
+                        <tr>
+                            <th>Revived Today</th>
+                            <td>
+                                <?php echo intval(WPBQ_Queue_Manager::get_today_revival_count()); ?> / <?php echo intval(get_option('wpbq_revival_daily_max', 1)); ?> of daily limit used for revived posts.
+                            </td>
+                        </tr>
                         <tr>
                             <th>Test Image URL</th>
                             <td>
