@@ -914,7 +914,7 @@ if (isset($_POST['wpbq_run_cron']) && wp_verify_nonce($_POST['_wpnonce'], 'wpbq_
                         <tr>
                             <th>About</th>
                             <td>
-                                <p>Occasionally pull an old archive post back into the queue to give it a second life. This is separate from your normal daily posting limit.</p>
+                                <p>Occasionally pull an old archive post back into the queue to give it a second life. This is included in your normal daily posting limit.</p>
                             </td>
                         </tr>
                         <tr>
