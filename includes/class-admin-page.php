@@ -656,6 +656,12 @@ echo '</p></div>';
                 <div class="wpbq-tab-panel" id="wpbq-tab-bluesky">
                     <table class="form-table">
                         <tr>
+                            <th>About</th>
+                            <td>
+                                <p>Post to a single Bluesky account when processing the queue. You need to create an application on Bluesky and generate an app password.</p>
+                            </td>
+                        </tr>
+                        <tr>
                             <th>Enable Bluesky</th>
                             <td>
                                 <label>
@@ -698,6 +704,12 @@ echo '</p></div>';
                 <!-- ====== MASTODON ====== -->
                 <div class="wpbq-tab-panel" id="wpbq-tab-mastodon">
                     <table class="form-table">
+                        <tr>
+                            <th>About</th>
+                            <td>
+                                <p>Post to a single Mastodon account when processing the queue. You need to create an application on your Mastodon instance and generate an access token.</p>
+                            </td>
+                        </tr>
                         <tr>
                             <th>Enable Mastodon</th>
                             <td>
@@ -758,6 +770,12 @@ echo '</p></div>';
                 <div class="wpbq-tab-panel" id="wpbq-tab-hashtags">
                     <table class="form-table">
                         <tr>
+                            <th>About</th>
+                            <td>
+                                <p>Automatically append hashtags to your posts based on the blog post's tags and categories. You can also specify a list of hashtags to always include.</p>
+                            </td>
+                        </tr>   
+                        <tr>
                             <th>Max Hashtags Per Post</th>
                             <td>
                                 <input type="number" name="wpbq_max_hashtags"
@@ -792,6 +810,12 @@ echo '</p></div>';
                 <!-- ====== AUTO-QUEUE ====== -->
                 <div class="wpbq-tab-panel" id="wpbq-tab-autoqueue">
                     <table class="form-table">
+                        <tr>
+                            <th>About</th>
+                            <td>
+                                <p>Automatically add new posts to the queue when they are published. This is separate from your normal daily posting limit.</p>
+                            </td>
+                        </tr>
                         <tr>
                             <th>Enable Auto-Queue</th>
                             <td>
@@ -835,6 +859,12 @@ echo '</p></div>';
                 <!-- ====== REVIVE OLD POSTS ====== -->
                 <div class="wpbq-tab-panel" id="wpbq-tab-revive">
                     <table class="form-table">
+                        <tr>
+                            <th>About</th>
+                            <td>
+                                <p>Occasionally pull an old archive post back into the queue to give it a second life. This is separate from your normal daily posting limit.</p>
+                            </td>
+                        </tr>
                         <tr>
                             <th>Enable Revival</th>
                             <td>
@@ -909,6 +939,12 @@ echo '</p></div>';
                 <div class="wpbq-tab-panel" id="wpbq-tab-schedule">
                     <table class="form-table">
                         <tr>
+                            <th>About</th>
+                            <td>
+                                <p>Control how often posts are sent from the queue, and when they are allowed to post.</p>  
+                            </td>
+                        </tr>
+                        <tr>
                             <th>Enable Queue Processing</th>
                             <td>
                                 <label>
@@ -958,6 +994,12 @@ echo '</p></div>';
                 <!-- ====== RANDOM POSTING ====== -->
                 <div class="wpbq-tab-panel" id="wpbq-tab-random">
                     <table class="form-table">
+                            <tr>
+                            <th>About</th>
+                            <td>
+                                <p>Random posting is an optional feature that occasionally picks a random item from the queue to post, in addition to your normal scheduled posting. </p>
+                            </td>
+                        </tr>
                         <tr>
                             <th>Enable Random Posts</th>
                             <td>
@@ -981,9 +1023,15 @@ echo '</p></div>';
                 <div class="wpbq-tab-panel" id="wpbq-tab-template">
                     <table class="form-table">
                         <tr>
+                            <th>About</th>
+                            <td>
+                                <p>Customize how your queued posts are formatted when posted to feeds. Use the available tags below to include dynamic content.</p>
+                            </td>
+                        </tr>
+                        <tr>
                             <th>Archive Post Template</th>
                             <td>
-                                <textarea name="wpbq_post_template" rows="4" class="large-text"><?php
+                                <textarea name="wpbq_post_template" rows="10" class="large-text"><?php
                                     echo esc_textarea(get_option('wpbq_post_template', "📝 {title}\n\n{excerpt}\n\n🔗 {url}"));
                                 ?></textarea>
                                 <p class="description">
