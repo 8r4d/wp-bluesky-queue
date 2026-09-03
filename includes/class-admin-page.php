@@ -616,15 +616,44 @@ echo '</p></div>';
     /**
      * SETTINGS PAGE
      */
+    /**
+     * Tab definitions for the settings page: slug => [label, icon]
+     */
+    private function get_settings_tabs() {
+        return array(
+            'bluesky'   => array('label' => 'Bluesky',       'icon' => '🦋'),
+            'mastodon'  => array('label' => 'Mastodon',      'icon' => '🐘'),
+            'hashtags'  => array('label' => 'Hashtags',      'icon' => '#️⃣'),
+            'autoqueue' => array('label' => 'Auto-Queue',    'icon' => '🚀'),
+            'revive'    => array('label' => 'Revive Posts',  'icon' => '♻️'),
+            'schedule'  => array('label' => 'Scheduling',    'icon' => '📅'),
+            'random'    => array('label' => 'Random Posts',  'icon' => '🎲'),
+            'template'  => array('label' => 'Post Template', 'icon' => '📝'),
+            'debug'     => array('label' => 'Debug Tools',   'icon' => '🔍'),
+        );
+    }
+
     public function render_settings_page() {
+        $tabs = $this->get_settings_tabs();
         ?>
         <div class="wrap wpbq-wrap">
             <h1>⚙️ Queue Settings</h1>
+
+            <h2 class="nav-tab-wrapper wpbq-settings-tabs">
+                <?php foreach ($tabs as $slug => $tab) : ?>
+                    <a href="#wpbq-tab-<?php echo esc_attr($slug); ?>"
+                       class="nav-tab wpbq-settings-tab"
+                       data-tab="<?php echo esc_attr($slug); ?>">
+                        <?php echo $tab['icon']; ?> <?php echo esc_html($tab['label']); ?>
+                    </a>
+                <?php endforeach; ?>
+            </h2>
+
             <form method="post" action="options.php">
                 <?php settings_fields('wpbq_settings'); ?>
 
-                    <!-- ====== BLUESKY ACCOUNT ====== -->
-                    <h2>🦋 Bluesky</h2>
+                <!-- ====== BLUESKY ====== -->
+                <div class="wpbq-tab-panel" id="wpbq-tab-bluesky">
                     <table class="form-table">
                         <tr>
                             <th>Enable Bluesky</th>
@@ -636,126 +665,132 @@ echo '</p></div>';
                                 </label>
                             </td>
                         </tr>
-                    <tr>
-                        <th>Bluesky Handle</th>
-                        <td>
-                            <input type="text" name="wpbq_bluesky_handle" value="<?php echo esc_attr(get_option('wpbq_bluesky_handle')); ?>" class="regular-text" placeholder="yourname.bsky.social">
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>App Password</th>
-                        <td>
-                            <input type="password" name="wpbq_bluesky_app_password" value="<?php echo esc_attr(get_option('wpbq_bluesky_app_password')); ?>" class="regular-text" placeholder="xxxx-xxxx-xxxx-xxxx">
-                            <p class="description">Create at: Bluesky → Settings → Privacy and Security → App Passwords</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>PDS Host</th>
-                        <td>
-                            <input type="url" name="wpbq_bluesky_pds_host" value="<?php echo esc_attr(get_option('wpbq_bluesky_pds_host', 'https://bsky.social')); ?>" class="regular-text">
-                            <p class="description">Default: https://bsky.social</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Test Connection</th>
-                        <td>
-                            <button type="button" id="wpbq-test-connection" class="button">🔌 Test Connection</button>
-                            <span id="wpbq-test-result"></span>
-                        </td>
-                    </tr>
-                </table>
+                        <tr>
+                            <th>Bluesky Handle</th>
+                            <td>
+                                <input type="text" name="wpbq_bluesky_handle" value="<?php echo esc_attr(get_option('wpbq_bluesky_handle')); ?>" class="regular-text" placeholder="yourname.bsky.social">
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>App Password</th>
+                            <td>
+                                <input type="password" name="wpbq_bluesky_app_password" value="<?php echo esc_attr(get_option('wpbq_bluesky_app_password')); ?>" class="regular-text" placeholder="xxxx-xxxx-xxxx-xxxx">
+                                <p class="description">Create at: Bluesky → Settings → Privacy and Security → App Passwords</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>PDS Host</th>
+                            <td>
+                                <input type="url" name="wpbq_bluesky_pds_host" value="<?php echo esc_attr(get_option('wpbq_bluesky_pds_host', 'https://bsky.social')); ?>" class="regular-text">
+                                <p class="description">Default: https://bsky.social</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Test Connection</th>
+                            <td>
+                                <button type="button" id="wpbq-test-connection" class="button">🔌 Test Connection</button>
+                                <span id="wpbq-test-result"></span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
 
                 <!-- ====== MASTODON ====== -->
-                <h2>🐘 Mastodon</h2>
-                <table class="form-table">
-                    <tr>
-                        <th>Enable Mastodon</th>
-                        <td>
-                            <label>
-                                <input type="checkbox" name="wpbq_mastodon_enabled" value="1"
-                                    <?php checked(get_option('wpbq_mastodon_enabled'), 1); ?>>
-                                Also post to Mastodon when processing queue
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Instance URL</th>
-                        <td>
-                            <input type="url" name="wpbq_mastodon_instance"
-                                value="<?php echo esc_attr(get_option('wpbq_mastodon_instance')); ?>"
-                                class="regular-text" placeholder="https://mastodon.social">
-                            <p class="description">Your Mastodon instance (e.g., https://mastodon.social, https://fosstodon.org)</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Access Token</th>
-                        <td>
-                            <input type="password" name="wpbq_mastodon_token"
-                                value="<?php echo esc_attr(get_option('wpbq_mastodon_token')); ?>"
-                                class="regular-text">
-                            <p class="description">
-                                To get a token:<br>
-                                1. Go to your Mastodon instance → Preferences → Development → New Application<br>
-                                2. Application name: <code>WP Bluesky Queue</code><br>
-                                3. Scopes needed: <code>write:statuses</code> and <code>write:media</code><br>
-                                4. Submit, then click your app name and copy the <strong>Access Token</strong>
-                            </p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Post Visibility</th>
-                        <td>
-                            <select name="wpbq_mastodon_visibility">
-                                <?php $vis = get_option('wpbq_mastodon_visibility', 'public'); ?>
-                                <option value="public" <?php selected($vis, 'public'); ?>>🌍 Public</option>
-                                <option value="unlisted" <?php selected($vis, 'unlisted'); ?>>🔓 Unlisted</option>
-                                <option value="private" <?php selected($vis, 'private'); ?>>🔒 Followers Only</option>
-                            </select>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Test Connection</th>
-                        <td>
-                            <button type="button" id="wpbq-test-mastodon" class="button">🔌 Test Mastodon Connection</button>
-                            <span id="wpbq-test-mastodon-result"></span>
-                            <p class="description">⚠️ Make sure to <strong>Save Changes</strong> before testing.</p>
-                        </td>
-                    </tr>
-                </table>
-                <h2>#️⃣ Hashtags</h2>
-                            <table class="form-table">
-                                <tr>
-                                    <th>Max Hashtags Per Post</th>
-                                    <td>
-                                        <input type="number" name="wpbq_max_hashtags" 
-                                            value="<?php echo esc_attr(get_option('wpbq_max_hashtags', 5)); ?>" 
-                                            min="0" max="15">
-                                        <p class="description">Maximum number of hashtags to append (0 to disable)</p>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th>Hashtag Sources</th>
-                                    <td>
-                                        <label>
-                                            <input type="checkbox" name="wpbq_hashtags_from_categories" value="1" 
-                                                <?php checked(get_option('wpbq_hashtags_from_categories'), 1); ?>>
-                                            Include categories as hashtags (in addition to tags)
-                                        </label>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th>Always Include These Hashtags</th>
-                                    <td>
-                                        <input type="text" name="wpbq_always_include_hashtags" class="large-text"
-                                            value="<?php echo esc_attr(get_option('wpbq_always_include_hashtags', '')); ?>"
-                                            placeholder="blog, MyBrand, tech">
-                                        <p class="description">Comma-separated list. These are added to every post (before tag-based hashtags). 
-                                        Don't include the # symbol.</p>
-                                    </td>
-                                </tr>
-                            </table>
+                <div class="wpbq-tab-panel" id="wpbq-tab-mastodon">
+                    <table class="form-table">
+                        <tr>
+                            <th>Enable Mastodon</th>
+                            <td>
+                                <label>
+                                    <input type="checkbox" name="wpbq_mastodon_enabled" value="1"
+                                        <?php checked(get_option('wpbq_mastodon_enabled'), 1); ?>>
+                                    Also post to Mastodon when processing queue
+                                </label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Instance URL</th>
+                            <td>
+                                <input type="url" name="wpbq_mastodon_instance"
+                                    value="<?php echo esc_attr(get_option('wpbq_mastodon_instance')); ?>"
+                                    class="regular-text" placeholder="https://mastodon.social">
+                                <p class="description">Your Mastodon instance (e.g., https://mastodon.social, https://fosstodon.org)</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Access Token</th>
+                            <td>
+                                <input type="password" name="wpbq_mastodon_token"
+                                    value="<?php echo esc_attr(get_option('wpbq_mastodon_token')); ?>"
+                                    class="regular-text">
+                                <p class="description">
+                                    To get a token:<br>
+                                    1. Go to your Mastodon instance → Preferences → Development → New Application<br>
+                                    2. Application name: <code>WP Bluesky Queue</code><br>
+                                    3. Scopes needed: <code>write:statuses</code> and <code>write:media</code><br>
+                                    4. Submit, then click your app name and copy the <strong>Access Token</strong>
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Post Visibility</th>
+                            <td>
+                                <select name="wpbq_mastodon_visibility">
+                                    <?php $vis = get_option('wpbq_mastodon_visibility', 'public'); ?>
+                                    <option value="public" <?php selected($vis, 'public'); ?>>🌍 Public</option>
+                                    <option value="unlisted" <?php selected($vis, 'unlisted'); ?>>🔓 Unlisted</option>
+                                    <option value="private" <?php selected($vis, 'private'); ?>>🔒 Followers Only</option>
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Test Connection</th>
+                            <td>
+                                <button type="button" id="wpbq-test-mastodon" class="button">🔌 Test Mastodon Connection</button>
+                                <span id="wpbq-test-mastodon-result"></span>
+                                <p class="description">⚠️ Make sure to <strong>Save Changes</strong> before testing.</p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
 
-                <h2>🚀 Auto-Queue on Publish</h2>
+                <!-- ====== HASHTAGS ====== -->
+                <div class="wpbq-tab-panel" id="wpbq-tab-hashtags">
+                    <table class="form-table">
+                        <tr>
+                            <th>Max Hashtags Per Post</th>
+                            <td>
+                                <input type="number" name="wpbq_max_hashtags"
+                                    value="<?php echo esc_attr(get_option('wpbq_max_hashtags', 5)); ?>"
+                                    min="0" max="15">
+                                <p class="description">Maximum number of hashtags to append (0 to disable)</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Hashtag Sources</th>
+                            <td>
+                                <label>
+                                    <input type="checkbox" name="wpbq_hashtags_from_categories" value="1"
+                                        <?php checked(get_option('wpbq_hashtags_from_categories'), 1); ?>>
+                                    Include categories as hashtags (in addition to tags)
+                                </label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Always Include These Hashtags</th>
+                            <td>
+                                <input type="text" name="wpbq_always_include_hashtags" class="large-text"
+                                    value="<?php echo esc_attr(get_option('wpbq_always_include_hashtags', '')); ?>"
+                                    placeholder="blog, MyBrand, tech">
+                                <p class="description">Comma-separated list. These are added to every post (before tag-based hashtags).
+                                Don't include the # symbol.</p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <!-- ====== AUTO-QUEUE ====== -->
+                <div class="wpbq-tab-panel" id="wpbq-tab-autoqueue">
                     <table class="form-table">
                         <tr>
                             <th>Enable Auto-Queue</th>
@@ -795,8 +830,10 @@ echo '</p></div>';
                             </td>
                         </tr>
                     </table>
+                </div>
 
-   <h2>♻️ Revive Old Posts</h2>
+                <!-- ====== REVIVE OLD POSTS ====== -->
+                <div class="wpbq-tab-panel" id="wpbq-tab-revive">
                     <table class="form-table">
                         <tr>
                             <th>Enable Revival</th>
@@ -806,7 +843,7 @@ echo '</p></div>';
                                         <?php checked(get_option('wpbq_revival_enabled'), 1); ?>>
                                     Occasionally pull an old archive post back into the queue
                                 </label>
-                                <p class="description">Checked every hour. When it fires, one eligible old post is added to the <strong>sequential queue</strong> — it still posts through your normal interval/daily-limit/posting-hours settings above, it just seeds a candidate in.</p>
+                                <p class="description">Checked every hour. When it fires, one eligible old post is added to the <strong>sequential queue</strong> — it still posts through your normal interval/daily-limit/posting-hours settings, it just seeds a candidate in.</p>
                             </td>
                         </tr>
                         <tr>
@@ -866,116 +903,156 @@ echo '</p></div>';
                             </td>
                         </tr>
                     </table>
- 
+                </div>
 
+                <!-- ====== SCHEDULING ====== -->
+                <div class="wpbq-tab-panel" id="wpbq-tab-schedule">
+                    <table class="form-table">
+                        <tr>
+                            <th>Enable Queue Processing</th>
+                            <td>
+                                <label>
+                                    <input type="checkbox" name="wpbq_queue_enabled" value="1" <?php checked(get_option('wpbq_queue_enabled'), 1); ?>>
+                                    Automatically post from queue on schedule
+                                </label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Post Interval (minutes)</th>
+                            <td>
+                                <input type="number" name="wpbq_post_interval" value="<?php echo esc_attr(get_option('wpbq_post_interval', 60)); ?>" min="5" max="1440">
+                                <p class="description">Minimum minutes between sequential queue posts</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Post Randomness Seed</th>
+                            <td>
+                                <input type="number" name="wpbq_post_seed" value="<?php echo esc_attr(get_option('wpbq_post_seed', 10)); ?>" min="1" max="500">
+                                <p class="description">Seed for random post selection</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Daily Post Limit</th>
+                            <td>
+                                <input type="number" name="wpbq_daily_limit" value="<?php echo esc_attr(get_option('wpbq_daily_limit', 10)); ?>" min="1" max="100">
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Posting Hours</th>
+                            <td>
+                                From <input type="number" name="wpbq_posting_start_hour" value="<?php echo esc_attr(get_option('wpbq_posting_start_hour', 8)); ?>" min="0" max="23" style="width:60px">
+                                to <input type="number" name="wpbq_posting_end_hour" value="<?php echo esc_attr(get_option('wpbq_posting_end_hour', 22)); ?>" min="0" max="23" style="width:60px">
+                                <p class="description">Posts will only go out during these hours (site timezone)</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Delete Old Items After</th>
+                            <td>
+                                <input type="number" name="wpbq_retention_days" value="<?php echo esc_attr(get_option('wpbq_retention_days', 30)); ?>" min="0" max="365"> days
+                                <p class="description">Posted/failed queue items older than this get auto-deleted. 0 = never delete.</p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
 
+                <!-- ====== RANDOM POSTING ====== -->
+                <div class="wpbq-tab-panel" id="wpbq-tab-random">
+                    <table class="form-table">
+                        <tr>
+                            <th>Enable Random Posts</th>
+                            <td>
+                                <label>
+                                    <input type="checkbox" name="wpbq_random_enabled" value="1" <?php checked(get_option('wpbq_random_enabled'), 1); ?>>
+                                    Randomly pick from queue (in addition to scheduled posting)
+                                </label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Random Post Probability</th>
+                            <td>
+                                <input type="number" name="wpbq_random_probability" value="<?php echo esc_attr(get_option('wpbq_random_probability', 30)); ?>" min="1" max="100">%
+                                <p class="description">Each hour, this is the chance a random queue item gets posted</p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
 
+                <!-- ====== POST TEMPLATE ====== -->
+                <div class="wpbq-tab-panel" id="wpbq-tab-template">
+                    <table class="form-table">
+                        <tr>
+                            <th>Archive Post Template</th>
+                            <td>
+                                <textarea name="wpbq_post_template" rows="4" class="large-text"><?php
+                                    echo esc_textarea(get_option('wpbq_post_template', "📝 {title}\n\n{excerpt}\n\n🔗 {url}"));
+                                ?></textarea>
+                                <p class="description">
+                                    Available tags: <code>{title}</code>, <code>{excerpt}</code>, <code>{url}</code>
+                                    <br>Max 300 characters after substitution (Bluesky limit)
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
 
-                <h2>📅 Scheduled Queue Posting</h2>
-                <table class="form-table">
-                    <tr>
-                        <th>Enable Queue Processing</th>
-                        <td>
-                            <label>
-                                <input type="checkbox" name="wpbq_queue_enabled" value="1" <?php checked(get_option('wpbq_queue_enabled'), 1); ?>>
-                                Automatically post from queue on schedule
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Post Interval (minutes)</th>
-                        <td>
-                            <input type="number" name="wpbq_post_interval" value="<?php echo esc_attr(get_option('wpbq_post_interval', 60)); ?>" min="5" max="1440">
-                            <p class="description">Minimum minutes between sequential queue posts</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Post Randomness Seed</th>
-                        <td>
-                            <input type="number" name="wpbq_post_seed" value="<?php echo esc_attr(get_option('wpbq_post_seed', 10)); ?>" min="1" max="500">
-                            <p class="description">Seed for random post selection</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Daily Post Limit</th>
-                        <td>
-                            <input type="number" name="wpbq_daily_limit" value="<?php echo esc_attr(get_option('wpbq_daily_limit', 10)); ?>" min="1" max="100">
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Posting Hours</th>
-                        <td>
-                            From <input type="number" name="wpbq_posting_start_hour" value="<?php echo esc_attr(get_option('wpbq_posting_start_hour', 8)); ?>" min="0" max="23" style="width:60px">
-                            to <input type="number" name="wpbq_posting_end_hour" value="<?php echo esc_attr(get_option('wpbq_posting_end_hour', 22)); ?>" min="0" max="23" style="width:60px">
-                            <p class="description">Posts will only go out during these hours (site timezone)</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Delete Old Items After</th>
-                        <td>
-                            <input type="number" name="wpbq_retention_days" value="<?php echo esc_attr(get_option('wpbq_retention_days', 30)); ?>" min="0" max="365"> days
-                            <p class="description">Posted/failed queue items older than this get auto-deleted. 0 = never delete.</p>
-                        </td>
-                    </tr>
-                </table>
-
-                <h2>🎲 Added Random Posting</h2>
-                <table class="form-table">
-                    <tr>
-                        <th>Enable Random Posts</th>
-                        <td>
-                            <label>
-                                <input type="checkbox" name="wpbq_random_enabled" value="1" <?php checked(get_option('wpbq_random_enabled'), 1); ?>>
-                                Randomly pick from queue (in addition to scheduled posting)
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Random Post Probability</th>
-                        <td>
-                            <input type="number" name="wpbq_random_probability" value="<?php echo esc_attr(get_option('wpbq_random_probability', 30)); ?>" min="1" max="100">%
-                            <p class="description">Each hour, this is the chance a random queue item gets posted</p>
-                        </td>
-                    </tr>
-                </table>
-
-                <h2>📝 Post Template</h2>
-                <table class="form-table">
-                    <tr>
-                        <th>Archive Post Template</th>
-                        <td>
-                            <textarea name="wpbq_post_template" rows="4" class="large-text"><?php
-                                echo esc_textarea(get_option('wpbq_post_template', "📝 {title}\n\n{excerpt}\n\n🔗 {url}"));
-                            ?></textarea>
-                            <p class="description">
-                                Available tags: <code>{title}</code>, <code>{excerpt}</code>, <code>{url}</code>
-                                <br>Max 300 characters after substitution (Bluesky limit)
-                            </p>
-                        </td>
-                    </tr>
-                </table>
-
-                
+                <!-- ====== DEBUG TOOLS (not part of the settings group, but stays in the tab flow) ====== -->
+                <div class="wpbq-tab-panel" id="wpbq-tab-debug">
+                    <table class="form-table">
+                        <tr>
+                            <th>Test Image URL</th>
+                            <td>
+                                <input type="url" id="wpbq-debug-image-url" class="regular-text"
+                                    placeholder="Paste a featured image URL from your blog">
+                                <button type="button" id="wpbq-debug-image-btn" class="button">Test Fetch</button>
+                                <p class="description">Fetches the URL server-side and reports the HTTP status, content type, and first bytes — useful for diagnosing why an image failed to attach to a post.</p>
+                                <pre id="wpbq-debug-image-result" style="margin-top:10px; background:#f1f1f1; padding:10px; display:none;"></pre>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
 
                 <?php submit_button(); ?>
             </form>
-
-
-            <h2>🔍 Debug Image Fetching</h2>
-            <table class="form-table">
-                <tr>
-                    <th>Test Image URL</th>
-                    <td>
-                        <input type="url" id="wpbq-debug-image-url" class="regular-text" 
-                            placeholder="Paste a featured image URL from your blog">
-                        <button type="button" id="wpbq-debug-image-btn" class="button">Test Fetch</button>
-                        <pre id="wpbq-debug-image-result" style="margin-top:10px; background:#f1f1f1; padding:10px; display:none;"></pre>
-                    </td>
-                </tr>
-            </table>
-
-
         </div>
+        <script>
+        (function() {
+            var STORAGE_KEY = 'wpbq_active_settings_tab';
+            var tabs   = document.querySelectorAll('.wpbq-settings-tab');
+            var panels = document.querySelectorAll('.wpbq-tab-panel');
+
+            function activate(slug) {
+                if (!slug) return;
+                var found = false;
+                tabs.forEach(function(tab) {
+                    var isMatch = tab.getAttribute('data-tab') === slug;
+                    tab.classList.toggle('nav-tab-active', isMatch);
+                    if (isMatch) found = true;
+                });
+                if (!found) return;
+                panels.forEach(function(panel) {
+                    panel.classList.toggle('wpbq-tab-panel-active', panel.id === 'wpbq-tab-' + slug);
+                });
+                try { localStorage.setItem(STORAGE_KEY, slug); } catch (e) {}
+            }
+
+            tabs.forEach(function(tab) {
+                tab.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    activate(tab.getAttribute('data-tab'));
+                });
+            });
+
+            var initial = 'bluesky';
+            try {
+                var stored = localStorage.getItem(STORAGE_KEY);
+                if (stored) initial = stored;
+            } catch (e) {}
+            if (window.location.hash) {
+                initial = window.location.hash.replace('#wpbq-tab-', '');
+            }
+            activate(initial);
+        })();
+        </script>
         <?php
     }
 

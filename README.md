@@ -10,6 +10,8 @@ You can format posts, include hashtags, and automatically generate hashtags from
 
 You can schedule manually written posts written using the queue page that include text, a link, a published post, or an image to be embedded into the post and delievered at a scheduled date and time.
 
+You can ask the plugin to revive old posts based on a collection of variables and frequencies, adding older content to the posting queue.
+
 You can set the archive window for retaining posting history (default 30 days.)
 
 Feel free to use this for non-commercial projects, fork it and improve it. It was mostly vibe-coded using Claude because I didn't have the time and energy to spend too much time making this, so I'm not claiming too much credit or offering any support whatsoever.

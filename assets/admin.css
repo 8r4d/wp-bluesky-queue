@@ -243,3 +243,49 @@
     background: #fff4e5;
     color: #b45309;
 }
+
+/* =====================
+   Settings Page Tabs
+   ===================== */
+.wpbq-settings-tabs {
+    margin-bottom: 0;
+}
+
+.wpbq-settings-tab {
+    cursor: pointer;
+    user-select: none;
+}
+
+.wpbq-tab-panel {
+    display: none;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-top: none;
+    padding: 20px 20px 4px;
+}
+
+.wpbq-tab-panel-active {
+    display: block;
+}
+
+.wpbq-tab-panel .form-table {
+    margin-top: 0;
+}
+
+.wpbq-tab-panel .form-table:first-child > tbody > tr:first-child > th,
+.wpbq-tab-panel .form-table:first-child > tbody > tr:first-child > td {
+    padding-top: 15px;
+}
+
+@media screen and (max-width: 782px) {
+    .wpbq-settings-tabs {
+        display: flex;
+        flex-wrap: wrap;
+    }
+
+    .wpbq-settings-tab {
+        flex: 1 1 auto;
+        text-align: center;
+        margin: 0 4px 4px 0;
+    }
+}
