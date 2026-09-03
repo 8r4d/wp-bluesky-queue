@@ -236,12 +236,7 @@ class WPBQ_Admin_Page {
                 </a>
             </div>
 
-<form method="post" style="margin-bottom:15px;">
-    <?php wp_nonce_field('wpbq_manual_cron'); ?>
-    <button type="submit" name="wpbq_run_cron" class="button">
-        ⚡ Manually Run Queue Processor
-    </button>
-</form>
+
 <?php
 if (isset($_POST['wpbq_run_cron']) && wp_verify_nonce($_POST['_wpnonce'], 'wpbq_manual_cron')) {
     global $wpdb;
@@ -325,6 +320,8 @@ if (isset($_POST['wpbq_run_cron']) && wp_verify_nonce($_POST['_wpnonce'], 'wpbq_
     } else {
         echo '⚠️ No items found to post in any category<br>';
     }
+
+
     
     echo '</div>';
     
@@ -475,23 +472,33 @@ if (isset($_POST['wpbq_run_cron']) && wp_verify_nonce($_POST['_wpnonce'], 'wpbq_
                 </tbody>
             </table>
         </div>
+
+                                
+    <form method="post" style="margin-bottom:8px;margin-top:16px; margin-left:2px;">
+        <?php wp_nonce_field('wpbq_manual_cron'); ?>
+        <button type="submit" name="wpbq_run_cron" class="button">
+            ⚡ Manually Run Queue Processor
+        </button>
+    </form>
+
+
         <?php
 
 
-$next_scheduled = wp_next_scheduled('wpbq_process_queue');
-$next_random    = wp_next_scheduled('wpbq_random_post');
-$today_count = self::get_todays_post_count();
-echo '<div class="notice notice-info"><p>';
-echo '⏰ <strong>Cron Status:</strong><br>';
-echo 'Queue processing next run: ' . ($next_scheduled ? date('M j, g:i:sa', $next_scheduled) . ' UTC (' . human_time_diff($next_scheduled) . ' from now)' : '❌ NOT SCHEDULED') . '<br>';
-echo 'Random posting next run: ' . ($next_random ? date('M j, g:i:sa', $next_random) . ' UTC' : '❌ NOT SCHEDULED') . '<br>';
-echo 'Current time (UTC): ' . gmdate('M j, g:i:sa') . '<br>';
-echo 'Current time (site): ' . current_time('M j, g:i:sa') . '<br>';
-echo 'Queue enabled: ' . (get_option('wpbq_queue_enabled') ? '✅' : '❌') . '<br>';
-echo 'DISABLE_WP_CRON: ' . (defined('DISABLE_WP_CRON') && DISABLE_WP_CRON ? '⚠️ YES — cron will NOT run on page loads' : 'No (normal)') . '<br>';
-echo 'Post interval: ' . get_option('wpbq_post_interval', 60) . ' minutes<br>';
-echo 'Daily limit combined all platforms: ' . $today_count . ' / ' . get_option('wpbq_daily_limit', 10) . '<br>';
-echo '</p></div>';
+//$next_scheduled = wp_next_scheduled('wpbq_process_queue');
+//$next_random    = wp_next_scheduled('wpbq_random_post');
+//$today_count = self::get_todays_post_count();
+//echo '<div class="notice notice-info"><p>';
+//echo '⏰ <strong>Cron Status:</strong><br>';
+//echo 'Queue processing next run: ' . ($next_scheduled ? date('M j, g:i:sa', $next_scheduled) . ' UTC (' . human_time_diff($next_scheduled) . ' from now)' : '❌ NOT SCHEDULED') . '<br>';
+//echo 'Random posting next run: ' . ($next_random ? date('M j, g:i:sa', $next_random) . ' UTC' : '❌ NOT SCHEDULED') . '<br>';
+//echo 'Current time (UTC): ' . gmdate('M j, g:i:sa') . '<br>';
+//echo 'Current time (site): ' . current_time('M j, g:i:sa') . '<br>';
+//echo 'Queue enabled: ' . (get_option('wpbq_queue_enabled') ? '✅' : '❌') . '<br>';
+//echo 'DISABLE_WP_CRON: ' . (defined('DISABLE_WP_CRON') && DISABLE_WP_CRON ? '⚠️ YES — cron will NOT run on page loads' : 'No (normal)') . '<br>';
+//echo 'Post interval: ' . get_option('wpbq_post_interval', 60) . ' minutes<br>';
+//echo 'Daily limit combined all platforms: ' . $today_count . ' / ' . get_option('wpbq_daily_limit', 10) . '<br>';
+//echo '</p></div>';
     }
 
 
@@ -509,6 +516,51 @@ echo '</p></div>';
         ));
     }
 
+    /**
+     * Render the cron status diagnostics as a form-table block
+     * (used inside the Debug Tools settings tab)
+     */
+    private function render_cron_status_table() {
+        $next_scheduled = wp_next_scheduled('wpbq_process_queue');
+        $next_random    = wp_next_scheduled('wpbq_random_post');
+        $today_count    = self::get_todays_post_count();
+        ?>
+        
+            <tr>
+                <th>Queue Processing</th>
+                <td><?php echo $next_scheduled
+                    ? 'Next run: ' . esc_html(date('M j, g:i:sa', $next_scheduled)) . ' UTC (' . esc_html(human_time_diff($next_scheduled)) . ' from now)'
+                    : '❌ NOT SCHEDULED'; ?></td>
+            </tr>
+            <tr>
+                <th>Random Posting</th>
+                <td><?php echo $next_random
+                    ? 'Next run: ' . esc_html(date('M j, g:i:sa', $next_random)) . ' UTC'
+                    : '❌ NOT SCHEDULED'; ?></td>
+            </tr>
+            <tr>
+                <th>Current Time</th>
+                <td>UTC: <?php echo esc_html(gmdate('M j, g:i:sa')); ?> &nbsp;|&nbsp; Site: <?php echo esc_html(current_time('M j, g:i:sa')); ?></td>
+            </tr>
+            <tr>
+                <th>Queue Enabled</th>
+                <td><?php echo get_option('wpbq_queue_enabled') ? '✅ Yes' : '❌ No'; ?></td>
+            </tr>
+            <tr>
+                <th>DISABLE_WP_CRON</th>
+                <td><?php echo (defined('DISABLE_WP_CRON') && DISABLE_WP_CRON) ? '⚠️ YES — cron will NOT run on page loads' : 'No (normal)'; ?></td>
+            </tr>
+            <tr>
+                <th>Post Interval</th>
+                <td><?php echo esc_html(get_option('wpbq_post_interval', 60)); ?> minutes</td>
+            </tr>
+            <tr>
+                <th>Daily Limit</th>
+                <td><?php echo esc_html($today_count); ?> / <?php echo esc_html(get_option('wpbq_daily_limit', 10)); ?> posts today (combined, all platforms)</td>
+            </tr>
+        <?php
+    }
+ 
 
     /**
      * IMPORT ARCHIVES PAGE
@@ -1046,6 +1098,8 @@ echo '</p></div>';
                 <!-- ====== DEBUG TOOLS (not part of the settings group, but stays in the tab flow) ====== -->
                 <div class="wpbq-tab-panel" id="wpbq-tab-debug">
                     <table class="form-table">
+
+                        <?php $this->render_cron_status_table(); ?>
                         <tr>
                             <th>Test Image URL</th>
                             <td>
