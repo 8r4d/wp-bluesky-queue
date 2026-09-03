@@ -1008,6 +1008,15 @@ echo '</p></div>';
                                 <pre id="wpbq-debug-image-result" style="margin-top:10px; background:#f1f1f1; padding:10px; display:none;"></pre>
                             </td>
                         </tr>
+                        <tr>
+                            <th>About this Plugin</th>
+                            <td>
+                                <p>Version: <?php echo esc_html(WPBQ_VERSION); ?></p>
+                                <p>Author: <a href="https://8r4d.com" target="_blank">Brad Salomons</a></p>
+                                <p>License: GPL v2 or later</p>
+                                <p>Source: <a href="https://github.com/8r4d/wp-bluesky-queue" target="_blank">GitHub</a></p>
+                            </td>
+                        </tr>
                     </table>
                 </div>
 
