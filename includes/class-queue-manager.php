@@ -245,8 +245,8 @@ class WPBQ_Queue_Manager {
             // Also strip any shortcodes that might have snuck into the excerpt
             $excerpt = strip_shortcodes($excerpt);
 
-            // Get template from settings or use default
-            $template = get_option('wpbq_post_template', "📝 {title}\n\n{excerpt}\n\n🔗 {url}");
+            // Pick a random template from the saved list (adds variety to the feed)
+            $template = self::get_random_template();
             $text = str_replace(
                 array('{title}', '{excerpt}', '{url}'),
                 array($title, $excerpt, $url),
@@ -367,7 +367,8 @@ class WPBQ_Queue_Manager {
         }
         $excerpt = strip_shortcodes($excerpt);
  
-        $template = get_option('wpbq_post_template', "📝 {title}\n\n{excerpt}\n\n🔗 {url}");
+        // Pick a random template from the saved list (adds variety to the feed)
+        $template = self::get_random_template();
         $text = str_replace(
             array('{title}', '{excerpt}', '{url}'),
             array($title, $excerpt, $url),
@@ -450,6 +451,38 @@ class WPBQ_Queue_Manager {
         ));
     }
 
+
+    /**
+     * Pick a random archive post template from the saved list.
+     *
+     * Falls back to the legacy single-template option (for sites upgrading
+     * from a version that only had one template), and finally to the
+     * built-in default if nothing has ever been saved.
+     */
+    public static function get_random_template() {
+        $templates = get_option('wpbq_post_templates', array());
+
+        if (!is_array($templates)) {
+            $templates = array();
+        }
+        // Drop any empty entries defensively
+        $templates = array_values(array_filter($templates, function($t) {
+            return is_string($t) && trim($t) !== '';
+        }));
+
+        if (!empty($templates)) {
+            $index = array_rand($templates);
+            return $templates[$index];
+        }
+
+        // Legacy fallback: pre-multi-template installs
+        $legacy = get_option('wpbq_post_template', '');
+        if (!empty($legacy)) {
+            return $legacy;
+        }
+
+        return "📝 {title}\n\n{excerpt}\n\n🔗 {url}";
+    }
 
     /**
      * Generate hashtag string from a post's WordPress tags and categories

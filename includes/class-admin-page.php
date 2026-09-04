@@ -172,7 +172,12 @@ class WPBQ_Admin_Page {
         register_setting($group, 'wpbq_posting_start_hour', 'absint');
         register_setting($group, 'wpbq_posting_end_hour', 'absint');
         register_setting($group, 'wpbq_random_probability', 'absint');
-        register_setting($group, 'wpbq_post_template', 'sanitize_textarea_field');
+        register_setting($group, 'wpbq_post_template', 'sanitize_textarea_field'); // kept for legacy fallback only, no longer edited directly
+        register_setting($group, 'wpbq_post_templates', array(
+            'type'              => 'array',
+            'sanitize_callback' => array($this, 'sanitize_templates'),
+            'default'           => array("📝 {title}\n\n{excerpt}\n\n🔗 {url}"),
+        ));
 
         // Hashtags
         register_setting($group, 'wpbq_max_hashtags', 'absint');
@@ -192,6 +197,31 @@ class WPBQ_Admin_Page {
         register_setting($group, 'wpbq_revival_min_age_days', 'absint');
         register_setting($group, 'wpbq_revival_cooldown_days', 'absint');
         register_setting($group, 'wpbq_revival_post_types');
+    }
+
+    /**
+     * Sanitize the list of archive post templates submitted from the
+     * settings page. Drops empty rows and always guarantees at least
+     * one template survives.
+     */
+    public function sanitize_templates($value) {
+        if (!is_array($value)) {
+            $value = array($value);
+        }
+
+        $clean = array();
+        foreach ($value as $template) {
+            $template = sanitize_textarea_field($template);
+            if (trim($template) !== '') {
+                $clean[] = $template;
+            }
+        }
+
+        if (empty($clean)) {
+            $clean = array("📝 {title}\n\n{excerpt}\n\n🔗 {url}");
+        }
+
+        return array_values($clean);
     }
 
     public function enqueue_assets($hook) {
@@ -1078,17 +1108,37 @@ if (isset($_POST['wpbq_run_cron']) && wp_verify_nonce($_POST['_wpnonce'], 'wpbq_
                             <th>About</th>
                             <td>
                                 <p>Customize how your queued posts are formatted when posted to feeds. Use the available tags below to include dynamic content.</p>
+                                <p>Add more than one template to add variety to your feed — a template is picked at <strong>random</strong> each time a post is queued (from archive imports, auto-queue on publish, and revived old posts).</p>
                             </td>
                         </tr>
                         <tr>
-                            <th>Archive Post Template</th>
+                            <th>Archive Post Templates</th>
                             <td>
-                                <textarea name="wpbq_post_template" rows="10" class="large-text"><?php
-                                    echo esc_textarea(get_option('wpbq_post_template', "📝 {title}\n\n{excerpt}\n\n🔗 {url}"));
-                                ?></textarea>
+                                <div id="wpbq-template-list">
+                                    <?php
+                                    $templates = get_option('wpbq_post_templates', array());
+                                    if (!is_array($templates) || empty($templates)) {
+                                        $legacy = get_option('wpbq_post_template', '');
+                                        $templates = !empty($legacy) ? array($legacy) : array("📝 {title}\n\n{excerpt}\n\n🔗 {url}");
+                                    }
+                                    $template_count = count($templates);
+                                    foreach ($templates as $tpl) :
+                                    ?>
+                                        <div class="wpbq-template-row">
+                                            <textarea name="wpbq_post_templates[]" rows="6" class="large-text"><?php echo esc_textarea($tpl); ?></textarea>
+                                            <p class="wpbq-template-row-actions">
+                                                <button type="button" class="button wpbq-remove-template"<?php echo $template_count <= 1 ? ' style="display:none;"' : ''; ?>>🗑️ Remove This Template</button>
+                                            </p>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                                <p>
+                                    <button type="button" class="button" id="wpbq-add-template">➕ Add Another Template</button>
+                                </p>
                                 <p class="description">
                                     Available tags: <code>{title}</code>, <code>{excerpt}</code>, <code>{url}</code>
                                     <br>Max 300 characters after substitution (Bluesky limit)
+                                    <br>With only one template saved, it's always used — same as before.
                                 </p>
                             </td>
                         </tr>

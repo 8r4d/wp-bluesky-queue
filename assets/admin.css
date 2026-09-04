@@ -245,6 +245,26 @@
 }
 
 /* =====================
+   Post Template Rows
+   ===================== */
+.wpbq-template-row {
+    background: #f9f9f9;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.wpbq-template-row textarea {
+    margin-bottom: 6px;
+}
+
+.wpbq-template-row-actions {
+    margin: 0;
+    text-align: right;
+}
+
+/* =====================
    Settings Page Tabs
    ===================== */
 .wpbq-settings-tabs {

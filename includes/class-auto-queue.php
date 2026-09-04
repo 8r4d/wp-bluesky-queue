@@ -46,7 +46,8 @@ class WPBQ_Auto_Queue {
             $excerpt = wp_trim_words($clean_content, 20, '...');
         }
 
-        $template = get_option('wpbq_post_template', "📝 {title}\n\n{excerpt}\n\n🔗 {url}");
+        // Pick a random template from the saved list (adds variety to the feed)
+        $template = WPBQ_Queue_Manager::get_random_template();
         $text = str_replace(
             array('{title}', '{excerpt}', '{url}'),
             array($title, $excerpt, $url),

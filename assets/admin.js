@@ -261,6 +261,39 @@
         });
 
     // =====================
+    // Post Templates: Add/Remove Rows
+    // =====================
+    function wpbqUpdateTemplateRemoveButtons() {
+        var $rows = $('#wpbq-template-list .wpbq-template-row');
+        if ($rows.length <= 1) {
+            $rows.find('.wpbq-remove-template').hide();
+        } else {
+            $rows.find('.wpbq-remove-template').show();
+        }
+    }
+
+    $('#wpbq-add-template').on('click', function() {
+        var $row = $(
+            '<div class="wpbq-template-row">' +
+                '<textarea name="wpbq_post_templates[]" rows="6" class="large-text" placeholder="📝 {title}&#10;&#10;{excerpt}&#10;&#10;🔗 {url}"></textarea>' +
+                '<p class="wpbq-template-row-actions">' +
+                    '<button type="button" class="button wpbq-remove-template">🗑️ Remove This Template</button>' +
+                '</p>' +
+            '</div>'
+        );
+        $('#wpbq-template-list').append($row);
+        wpbqUpdateTemplateRemoveButtons();
+        $row.find('textarea').trigger('focus');
+    });
+
+    $(document).on('click', '.wpbq-remove-template', function() {
+        $(this).closest('.wpbq-template-row').remove();
+        wpbqUpdateTemplateRemoveButtons();
+    });
+
+    wpbqUpdateTemplateRemoveButtons();
+
+    // =====================
     // Drag & Drop Reordering
     // =====================
     if ($('#wpbq-queue-body').length && $.fn.sortable) {
