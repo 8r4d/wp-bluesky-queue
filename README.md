@@ -1,6 +1,10 @@
-This plugin is pretty rough around the edges and I've left some of debugging output on but I got it to work on multiple Wordpress 7.1 sites. 
+This plugin is pretty rough around the edges and I've left some of debugging output on but I got it to work on multiple Wordpress 7.1 sites. It is not a certified nor an official plugin. Use at your own risk.
+
+**How to install:**
 
 Zip the files, keeping the structure, upload as a plugin and activate. Voila!
+
+**What it can do:**
 
 Add and save app credentials from both Bluesky and Mastodon in the settings page to get started.
 
@@ -15,5 +19,7 @@ You can schedule manually written posts written using the queue page that includ
 You can ask the plugin to revive old posts based on a collection of variables and frequencies, adding older content to the posting queue.
 
 You can set the archive window for retaining posting history (default 30 days.)
+
+**Other info:**
 
 Feel free to use this for non-commercial projects, fork it and improve it. It was mostly vibe-coded using Claude because I didn't have the time and energy to spend too much time making this, so I'm not claiming too much credit or offering any support whatsoever.
