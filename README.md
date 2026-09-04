@@ -1,12 +1,12 @@
-=== Bluedon Queue Social Autoposter ===
+# Bluedon Queue Social Autoposter 
+
 Contributors: bradsalomons
-Donate link: https://8r4d.com/plugins/
-Tags: bluesky, mastadon, social media, feed, auto posting
-Requires at least: 7.1
+
 Tested up to: 7.1
+
 Stable tag: 1.8.0
-License: GNU General Public License v2 or later
-License URI: http://www.gnu.org/licenses/gpl-2.0.html
+
+License: GNU General Public License v2 or later http://www.gnu.org/licenses/gpl-2.0.html
 
 Bluesky & Mastodon posting buffer and feed auto-queue plugin for Wordpress.
 
