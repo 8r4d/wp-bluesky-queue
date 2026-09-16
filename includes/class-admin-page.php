@@ -16,7 +16,8 @@ class WPBQ_Admin_Page {
         add_action('wp_ajax_wpbq_update_order', array($this, 'ajax_update_order'));
         add_action('wp_ajax_wpbq_debug_image', array($this, 'ajax_debug_image'));
         add_action('wp_ajax_wpbq_test_mastodon', array($this, 'ajax_test_mastodon'));
-        
+        add_action('wp_ajax_wpbq_test_buffer', array($this, 'ajax_test_buffer'));
+
     }
 
     public function ajax_debug_image() {
@@ -162,6 +163,20 @@ class WPBQ_Admin_Page {
             }
         ));
         register_setting($group, 'wpbq_mastodon_visibility', 'sanitize_text_field');
+
+        // Buffer
+        register_setting($group, 'wpbq_buffer_enabled', 'absint');
+        register_setting($group, 'wpbq_buffer_api_key', array(
+            'sanitize_callback' => function($value) {
+                return trim($value);
+            }
+        ));
+        register_setting($group, 'wpbq_buffer_channel_ids', array(
+            'sanitize_callback' => function($value) {
+                $ids = array_filter(array_map('trim', explode(',', $value)));
+                return implode(',', $ids);
+            }
+        ));
 
         // Queue settings
         register_setting($group, 'wpbq_queue_enabled', 'absint');
@@ -705,6 +720,7 @@ if (isset($_POST['wpbq_run_cron']) && wp_verify_nonce($_POST['_wpnonce'], 'wpbq_
         return array(
             'bluesky'   => array('label' => 'Bluesky',       'icon' => '🦋'),
             'mastodon'  => array('label' => 'Mastodon',      'icon' => '🐘'),
+            'buffer'    => array('label' => 'Buffer',        'icon' => '📤'),
             'hashtags'  => array('label' => 'Hashtags',      'icon' => '#️⃣'),
             'autoqueue' => array('label' => 'Auto-Queue',    'icon' => '🚀'),
             'revive'    => array('label' => 'Revive Posts',  'icon' => '♻️'),
@@ -842,6 +858,58 @@ if (isset($_POST['wpbq_run_cron']) && wp_verify_nonce($_POST['_wpnonce'], 'wpbq_
                             <td>
                                 <button type="button" id="wpbq-test-mastodon" class="button">🔌 Test Mastodon Connection</button>
                                 <span id="wpbq-test-mastodon-result"></span>
+                                <p class="description">⚠️ Make sure to <strong>Save Changes</strong> before testing.</p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <!-- ====== BUFFER ====== -->
+                <div class="wpbq-tab-panel" id="wpbq-tab-buffer">
+                    <table class="form-table">
+                        <tr>
+                            <th>About</th>
+                            <td>
+                                <p>Instead of this plugin handling OAuth for extra networks (X/Twitter, LinkedIn, Instagram, Threads, etc.), hand posts off to Buffer and let Buffer publish to whatever it's already connected to. Buffer decides the exact posting time using its own queue for each channel.</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Enable Buffer</th>
+                            <td>
+                                <label>
+                                    <input type="checkbox" name="wpbq_buffer_enabled" value="1"
+                                        <?php checked(get_option('wpbq_buffer_enabled'), 1); ?>>
+                                    Also send posts to Buffer when processing queue
+                                </label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>API Key</th>
+                            <td>
+                                <input type="password" name="wpbq_buffer_api_key"
+                                    value="<?php echo esc_attr(get_option('wpbq_buffer_api_key')); ?>"
+                                    class="regular-text">
+                                <p class="description">
+                                    Generate a personal API key at
+                                    <a href="https://publish.buffer.com/settings/api" target="_blank">publish.buffer.com/settings/api</a>
+                                    (Personal Access tab → New Key). This acts on your Buffer account only — no OAuth app needed.
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Channel ID(s)</th>
+                            <td>
+                                <input type="text" name="wpbq_buffer_channel_ids"
+                                    value="<?php echo esc_attr(get_option('wpbq_buffer_channel_ids')); ?>"
+                                    class="regular-text" placeholder="channelId1, channelId2">
+                                <p class="description">Comma-separated Buffer channel IDs to post to. Save your API key, then click "Test Connection" below to list your channel IDs.</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Test Connection</th>
+                            <td>
+                                <button type="button" id="wpbq-test-buffer" class="button">🔌 Test Buffer Connection</button>
+                                <span id="wpbq-test-buffer-result"></span>
                                 <p class="description">⚠️ Make sure to <strong>Save Changes</strong> before testing.</p>
                             </td>
                         </tr>
@@ -1358,6 +1426,37 @@ if (isset($_POST['wpbq_run_cron']) && wp_verify_nonce($_POST['_wpnonce'], 'wpbq_
         wp_send_json_success('✅ Connected as ' . $name . ' (@' . $result['username'] . ')');
     }
 
+
+    public function ajax_test_buffer() {
+        check_ajax_referer('wpbq_nonce', 'nonce');
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+
+        $api    = new WPBQ_Buffer_API();
+        $result = $api->test_connection();
+
+        if (is_wp_error($result)) {
+            wp_send_json_error('Connection failed: ' . $result->get_error_message());
+        }
+
+        $channels = isset($result['channels']) ? $result['channels'] : array();
+        $payload_types = isset($result['post_action_payload']['possibleTypes']) ? $result['post_action_payload']['possibleTypes'] : array();
+
+        $message = empty($channels)
+            ? '✅ Connected, but no channels found on this account.'
+            : '✅ Connected! Channels — ' . implode(' | ', array_map(function($channel) {
+                return esc_html($channel['name'] . ' (' . $channel['service'] . '): ' . $channel['id']);
+            }, $channels));
+
+        if (!empty($payload_types)) {
+            $type_list = array_map(function($type) {
+                $fields = isset($type['fields']) ? wp_list_pluck($type['fields'], 'name') : array();
+                return esc_html($type['name'] . ' {' . implode(', ', $fields) . '}');
+            }, $payload_types);
+            $message .= ' — PostActionPayload members: ' . implode(' | ', $type_list);
+        }
+
+        wp_send_json_success($message);
+    }
 
     public function ajax_cleanup_now() {
         check_ajax_referer('wpbq_nonce', 'nonce');

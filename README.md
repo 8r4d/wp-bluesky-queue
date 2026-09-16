@@ -4,11 +4,11 @@ Contributors: bradsalomons
 
 Tested up to: 7.1
 
-Stable tag: 1.8.0
+Stable tag: 1.9.0
 
 License: GNU General Public License v2 or later http://www.gnu.org/licenses/gpl-2.0.html
 
-Bluesky & Mastodon posting buffer and feed auto-queue plugin for Wordpress.
+Bluesky & Mastodon posting buffer and feed auto-queue plugin for Wordpress, with an optional hand-off to Buffer for everything else (X/Twitter, LinkedIn, Instagram, Threads, etc.).
 
 This plugin remains pretty rough around the edges, but I think it might be useful for others.  I've left some of debugging output in the settings page, on but I've got it to work on multiple Wordpress 7.1 sites. Note: It is not a certified nor an official plugin. Use at your own risk.
 
@@ -29,6 +29,8 @@ Schedule manually written posts written using the queue page that include text, 
 Randomly revive old posts based on variables, date-windows, and frequencies, adding older content to the posting queue.
 
 Set an the archive window for retaining posting history (default 30 days).
+
+Optionally send the same queued posts to Buffer (via a personal API key, no OAuth setup needed on your end) so Buffer can fan them out to whichever other networks it has connected — no need to build/maintain OAuth for each extra platform yourself.
 
 **Other Info:**
 

@@ -260,6 +260,29 @@
             });
         });
 
+        $('#wpbq-test-buffer').on('click', function() {
+            var $btn = $(this);
+            var $result = $('#wpbq-test-buffer-result');
+
+            $btn.prop('disabled', true);
+            $result.html('<span class="wpbq-loading"></span> Testing...');
+
+            $.post(wpbq.ajax_url, {
+                action: 'wpbq_test_buffer',
+                nonce: wpbq.nonce
+            }, function(response) {
+                if (response.success) {
+                    $result.html('<span style="color:#1e8e3e;">' + response.data + '</span>');
+                } else {
+                    $result.html('<span style="color:#d93025;">❌ ' + response.data + '</span>');
+                }
+            }).fail(function() {
+                $result.html('<span style="color:#d93025;">❌ Network error</span>');
+            }).always(function() {
+                $btn.prop('disabled', false);
+            });
+        });
+
     // =====================
     // Post Templates: Add/Remove Rows
     // =====================

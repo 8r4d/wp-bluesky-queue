@@ -212,6 +212,28 @@ class WPBQ_Cron_Handler {
             }
         }
 
+        // ---- BUFFER (fans out to whatever networks are connected there) ----
+        if (get_option('wpbq_buffer_enabled', false)) {
+            $buffer_api = new WPBQ_Buffer_API();
+            $buffer_result = $buffer_api->create_post(
+                $item->post_text,
+                $item->link_url,
+                $item->image_url
+            );
+
+            if (is_wp_error($buffer_result)) {
+                $all_errors[] = 'Buffer: ' . $buffer_result->get_error_message();
+                WPBQ_Queue_Manager::log($item->id, 'buffer_failed', $buffer_result->get_error_message());
+            } else {
+                $any_success = true;
+                WPBQ_Queue_Manager::log(
+                    $item->id,
+                    'buffer_posted',
+                    'Queued on Buffer. Post ID(s): ' . implode(', ', $buffer_result['post_ids'])
+                );
+            }
+        }
+
         // ---- UPDATE STATUS ----
         if ($any_success) {
             WPBQ_Queue_Manager::update_item($item->id, array(
