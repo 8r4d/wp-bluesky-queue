@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP Bluedon Queue
  * Description: Manage and auto-post a queue of social media posts to Bluesky & Mastodon, including blog archive links.
- * Version: 1.9.4
+ * Version: 1.9.5
  * Author: Brad Salomons
  * License: GPL v2 or later
  * Text Domain: wp-bluesky-queue

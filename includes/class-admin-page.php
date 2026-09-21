@@ -722,12 +722,12 @@ if (isset($_POST['wpbq_run_cron']) && wp_verify_nonce($_POST['_wpnonce'], 'wpbq_
             'mastodon'  => array('label' => 'Mastodon',      'icon' => '🐘'),
             'buffer'    => array('label' => 'Buffer',        'icon' => '📤'),
             'hashtags'  => array('label' => 'Hashtags',      'icon' => '#️⃣'),
-            'autoqueue' => array('label' => 'Auto-Queue',    'icon' => '🚀'),
-            'revive'    => array('label' => 'Revive Posts',  'icon' => '♻️'),
+            'autoqueue' => array('label' => 'Auto-Queuing',    'icon' => '🚀'),
+            'revive'    => array('label' => 'Reviving',  'icon' => '♻️'),
             'schedule'  => array('label' => 'Scheduling',    'icon' => '📅'),
-            'random'    => array('label' => 'Random Posts',  'icon' => '🎲'),
-            'template'  => array('label' => 'Post Template', 'icon' => '📝'),
-            'debug'     => array('label' => 'Debug Tools',   'icon' => '🔍'),
+            'random'    => array('label' => 'Randomness',  'icon' => '🎲'),
+            'template'  => array('label' => 'Templates', 'icon' => '📝'),
+            'debug'     => array('label' => 'Debugging',   'icon' => '🔍'),
         );
     }
 
