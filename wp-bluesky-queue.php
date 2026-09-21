@@ -10,7 +10,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('WPBQ_VERSION', '1.9.4');
+define('WPBQ_VERSION', '1.9.5');
 define('WPBQ_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('WPBQ_PLUGIN_URL', plugin_dir_url(__FILE__));
 
