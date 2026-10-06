@@ -229,56 +229,13 @@ class WPBQ_Queue_Manager {
 
             if ($exists) continue;
 
-            // Build the post text
-            $title   = $post->post_title;
-            $url     = get_permalink($post->ID);
-
-            if (has_excerpt($post->ID)) {
-                $excerpt = get_the_excerpt($post->ID);
-            } else {
-                // Strip shortcodes BEFORE trimming words
-                $clean_content = strip_shortcodes($post->post_content);
-                $clean_content = wp_strip_all_tags($clean_content);
-                $excerpt = wp_trim_words($clean_content, 20, '...');
-            }
-
-            // Also strip any shortcodes that might have snuck into the excerpt
-            $excerpt = strip_shortcodes($excerpt);
-
-            // Pick a random template from the saved list (adds variety to the feed)
-            $template = self::get_random_template();
-            $text = str_replace(
-                array('{title}', '{excerpt}', '{url}'),
-                array($title, $excerpt, $url),
-                $template
-            );
-
-            // Generate hashtags from WordPress tags
-            $hashtags = self::generate_hashtags($post->ID);
-            if (!empty($hashtags)) {
-                $text .= "\n\n" . $hashtags;
-            }
-
-            // Truncate to 300 characters (Bluesky limit)
-            if (mb_strlen($text) > 300) {
-                // Try to fit by removing hashtags one at a time from the end
-                $text = self::fit_text_with_hashtags($template, $title, $excerpt, $url, $post->ID);
-            }
-
-            // Get featured image
-           $thumb_id = get_post_thumbnail_id($post->ID);
-            if ($thumb_id) {
-                $image_path = get_attached_file($thumb_id);
-                $image_url  = wp_get_attachment_image_url($thumb_id, 'medium_large');
-            } else {
-                $image_url = '';
-            }
+            $data = self::build_post_data_from_post($post);
 
             self::add_to_queue(array(
-                'post_text'    => $text,
+                'post_text'    => $data['text'],
                 'blog_post_id' => $post->ID,
-                'link_url'     => $url,
-                'image_url'    => $image_url ?: '',
+                'link_url'     => $data['url'],
+                'image_url'    => $data['image_url'],
                 'status'       => 'queued',
             ));
 
@@ -350,30 +307,25 @@ class WPBQ_Queue_Manager {
     }
  
     /**
-     * Build post_text / link / image data for a WP_Post the same way
-     * import_blog_archives() does, so revived posts look consistent
-     * with manually imported ones.
+     * Build post_text / link / image data for a WP_Post. Shared by archive
+     * imports, auto-queue on publish and revivals so they all look alike.
      */
     public static function build_post_data_from_post($post) {
-        $title = $post->post_title;
-        $url   = get_permalink($post->ID);
- 
-        if (has_excerpt($post->ID)) {
-            $excerpt = get_the_excerpt($post->ID);
-        } else {
-            $clean_content = strip_shortcodes($post->post_content);
-            $clean_content = wp_strip_all_tags($clean_content);
-            $excerpt = wp_trim_words($clean_content, 20, '...');
-        }
-        $excerpt = strip_shortcodes($excerpt);
- 
-        // Pick a random template from the saved list (adds variety to the feed)
-        $template = self::get_random_template();
-        $text = str_replace(
-            array('{title}', '{excerpt}', '{url}'),
-            array($title, $excerpt, $url),
-            $template
+        $url = get_permalink($post->ID);
+
+        // A hand-written social blurb beats the excerpt wherever it's used
+        $blurb   = self::get_social_blurb($post->ID);
+        $excerpt = $blurb !== '' ? $blurb : self::get_post_excerpt($post);
+        $tags = array(
+            '{title}'   => $post->post_title,
+            '{excerpt}' => $excerpt,
+            '{blurb}'   => $excerpt,
+            '{url}'     => $url,
         );
+
+        // Pick a random template from the saved list (adds variety to the feed)
+        $template = self::get_random_template($blurb !== '');
+        $text = strtr($template, $tags);
  
         $hashtags = self::generate_hashtags($post->ID);
         if (!empty($hashtags)) {
@@ -381,7 +333,7 @@ class WPBQ_Queue_Manager {
             if (mb_strlen($full_text) <= 300) {
                 $text = $full_text;
             } else {
-                $text = self::fit_text_with_hashtags($template, $title, $excerpt, $url, $post->ID);
+                $text = self::fit_text_with_hashtags($template, $tags, $post->ID);
             }
         }
  
@@ -458,8 +410,12 @@ class WPBQ_Queue_Manager {
      * Falls back to the legacy single-template option (for sites upgrading
      * from a version that only had one template), and finally to the
      * built-in default if nothing has ever been saved.
+     *
+     * Templates using {blurb} are only picked for posts that have a
+     * hand-written blurb — unless every template uses it, in which case
+     * {blurb} falls back to the excerpt.
      */
-    public static function get_random_template() {
+    public static function get_random_template($has_blurb = true) {
         $templates = get_option('wpbq_post_templates', array());
 
         if (!is_array($templates)) {
@@ -469,6 +425,15 @@ class WPBQ_Queue_Manager {
         $templates = array_values(array_filter($templates, function($t) {
             return is_string($t) && trim($t) !== '';
         }));
+
+        if (!$has_blurb) {
+            $without_blurb = array_values(array_filter($templates, function($t) {
+                return strpos($t, '{blurb}') === false;
+            }));
+            if (!empty($without_blurb)) {
+                $templates = $without_blurb;
+            }
+        }
 
         if (!empty($templates)) {
             $index = array_rand($templates);
@@ -482,6 +447,35 @@ class WPBQ_Queue_Manager {
         }
 
         return "📝 {title}\n\n{excerpt}\n\n🔗 {url}";
+    }
+
+    /**
+     * Pick one of the post's hand-written social blurbs at random (one per
+     * line in the post editor meta box), or '' if none were written.
+     */
+    public static function get_social_blurb($post_id) {
+        $raw = get_post_meta($post_id, '_wpbq_social_blurb', true);
+        if (!is_string($raw) || trim($raw) === '') return '';
+
+        $lines = array_values(array_filter(array_map('trim', preg_split('/\R/', $raw)), 'strlen'));
+        return empty($lines) ? '' : $lines[array_rand($lines)];
+    }
+
+    /**
+     * The post's excerpt, or the first 20 words of its content if it has none
+     */
+    public static function get_post_excerpt($post) {
+        if (has_excerpt($post->ID)) {
+            $excerpt = get_the_excerpt($post->ID);
+        } else {
+            // Strip shortcodes BEFORE trimming words
+            $clean_content = strip_shortcodes($post->post_content);
+            $clean_content = wp_strip_all_tags($clean_content);
+            $excerpt = wp_trim_words($clean_content, 20, '...');
+        }
+
+        // Also strip any shortcodes that might have snuck into the excerpt
+        return strip_shortcodes($excerpt);
     }
 
     /**
@@ -563,12 +557,8 @@ class WPBQ_Queue_Manager {
     /**
      * Fit post text + hashtags within 300 chars, removing hashtags as needed
      */
-    private static function fit_text_with_hashtags($template, $title, $excerpt, $url, $post_id) {
-        $base_text = str_replace(
-            array('{title}', '{excerpt}', '{url}'),
-            array($title, $excerpt, $url),
-            $template
-        );
+    public static function fit_text_with_hashtags($template, $tags, $post_id) {
+        $base_text = strtr($template, $tags);
 
         // Strip shortcodes from base text
         $base_text = strip_shortcodes($base_text);

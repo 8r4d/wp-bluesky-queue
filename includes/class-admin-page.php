@@ -1204,7 +1204,8 @@ if (isset($_POST['wpbq_run_cron']) && wp_verify_nonce($_POST['_wpnonce'], 'wpbq_
                                     <button type="button" class="button" id="wpbq-add-template">➕ Add Another Template</button>
                                 </p>
                                 <p class="description">
-                                    Available tags: <code>{title}</code>, <code>{excerpt}</code>, <code>{url}</code>
+                                    Available tags: <code>{title}</code>, <code>{excerpt}</code>, <code>{blurb}</code>, <code>{url}</code>
+                                    <br><code>{excerpt}</code> uses the post's social blurb if it has one, otherwise the excerpt. Templates with <code>{blurb}</code> are only used for posts that have a social blurb (set in the post editor sidebar).
                                     <br>Max 300 characters after substitution (Bluesky limit)
                                     <br>With only one template saved, it's always used — same as before.
                                 </p>

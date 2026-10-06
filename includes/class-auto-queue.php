@@ -35,50 +35,7 @@ class WPBQ_Auto_Queue {
         if ($exists) return;
 
         $title = $post->post_title;
-        $url   = get_permalink($post->ID);
-
-        if (has_excerpt($post->ID)) {
-            $excerpt = get_the_excerpt($post->ID);
-        } else {
-            $clean_content = strip_shortcodes($post->post_content);
-            $clean_content = preg_replace('/$$[^$$]+\]/', '', $clean_content);
-            $clean_content = wp_strip_all_tags($clean_content);
-            $excerpt = wp_trim_words($clean_content, 20, '...');
-        }
-
-        // Pick a random template from the saved list (adds variety to the feed)
-        $template = WPBQ_Queue_Manager::get_random_template();
-        $text = str_replace(
-            array('{title}', '{excerpt}', '{url}'),
-            array($title, $excerpt, $url),
-            $template
-        );
-
-        // Add hashtags
-        $hashtags = WPBQ_Queue_Manager::generate_hashtags($post->ID);
-        if (!empty($hashtags)) {
-            $full_text = $text . "\n\n" . $hashtags;
-            if (mb_strlen($full_text) <= 300) {
-                $text = $full_text;
-            } else {
-                $text = WPBQ_Queue_Manager::fit_text_with_hashtags(
-                    $template, $title, $excerpt, $url, $post->ID
-                );
-            }
-        }
-
-        if (mb_strlen($text) > 300) {
-            $text = mb_substr($text, 0, 297) . '...';
-        }
-
-        $thumb_id = get_post_thumbnail_id($post->ID);
-        $image_url = '';
-        if ($thumb_id) {
-            $image_url = wp_get_attachment_image_url($thumb_id, 'medium_large');
-            if (!$image_url) {
-                $image_url = wp_get_attachment_image_url($thumb_id, 'large');
-            }
-        }
+        $data  = WPBQ_Queue_Manager::build_post_data_from_post($post);
 
         $delay_minutes = intval(get_option('wpbq_auto_queue_delay', 0));
         $scheduled_at = null;
@@ -87,10 +44,10 @@ class WPBQ_Auto_Queue {
         }
 
         $queue_id = WPBQ_Queue_Manager::add_to_queue(array(
-            'post_text'    => $text,
+            'post_text'    => $data['text'],
             'blog_post_id' => $post->ID,
-            'link_url'     => $url,
-            'image_url'    => $image_url,
+            'link_url'     => $data['url'],
+            'image_url'    => $data['image_url'],
             'status'       => 'queued',
             'scheduled_at' => $scheduled_at,
         ));
@@ -142,14 +99,15 @@ class WPBQ_Auto_Queue {
      * Add meta box to post editor
      */
     public function add_meta_box() {
-        if (!get_option('wpbq_auto_queue_enabled', false)) return;
-
+        // Shown even with auto-queue off — the social blurb is also used
+        // by archive imports and revivals.
         $allowed_types = get_option('wpbq_auto_queue_post_types', array('post'));
         if (!is_array($allowed_types)) $allowed_types = array('post');
+        $allowed_types = array_unique(array_merge(array('post'), $allowed_types));
 
         add_meta_box(
             'wpbq_auto_queue',
-            '🦋 Bluesky Auto-Queue',
+            '🦋 Bluedon',
             array($this, 'render_meta_box'),
             $allowed_types,
             'side',
@@ -163,7 +121,8 @@ class WPBQ_Auto_Queue {
     public function render_meta_box($post) {
         wp_nonce_field('wpbq_meta_box', 'wpbq_meta_box_nonce');
 
-        $skip = get_post_meta($post->ID, '_wpbq_skip_auto_queue', true);
+        $skip  = get_post_meta($post->ID, '_wpbq_skip_auto_queue', true);
+        $blurb = get_post_meta($post->ID, '_wpbq_social_blurb', true);
 
         global $wpdb;
         $table = $wpdb->prefix . 'bluesky_queue';
@@ -187,14 +146,61 @@ class WPBQ_Auto_Queue {
             <hr>
         <?php endif; ?>
 
-        <label>
-            <input type="checkbox" name="wpbq_skip_auto_queue" value="1" <?php checked($skip, 1); ?>>
-            <strong>Skip</strong> auto-queue for this post
-        </label>
-        <p class="description" style="margin-top:8px;">
-            If checked, this post won't be automatically added to the Bluedon queue when published.
+        <p style="margin-bottom:4px;">
+            <label for="wpbq_social_blurb"><strong>Social blurb</strong></label>
         </p>
+        <textarea id="wpbq_social_blurb" name="wpbq_social_blurb" rows="4" style="width:100%;"><?php echo esc_textarea($blurb); ?></textarea>
+        <p class="description" id="wpbq-blurb-count"></p>
+        <p class="description">
+            Used in place of the excerpt for <code>{excerpt}</code> and <code>{blurb}</code>.
+            Put one blurb per line to have one picked at random each time it's shared.
+        </p>
+        <script>
+        (function() {
+            var box = document.getElementById('wpbq_social_blurb');
+            var out = document.getElementById('wpbq-blurb-count');
+            function update() {
+                var lines = box.value.split(/\r?\n/).filter(function(l) { return l.trim() !== ''; });
+                var longest = lines.reduce(function(max, l) { return Math.max(max, Array.from(l.trim()).length); }, 0);
+                out.textContent = lines.length
+                    ? lines.length + (lines.length === 1 ? ' blurb' : ' blurbs') + ', longest ' + longest + ' chars (Bluesky posts max out at 300 including title, link and hashtags)'
+                    : '';
+            }
+            box.addEventListener('input', update);
+            update();
+        })();
+        </script>
+
+        <?php if (get_option('wpbq_auto_queue_enabled', false)) : ?>
+            <hr>
+            <label>
+                <input type="checkbox" name="wpbq_skip_auto_queue" value="1" <?php checked($skip, 1); ?>>
+                <strong>Skip</strong> auto-queue for this post
+            </label>
+            <p class="description" style="margin-top:8px;">
+                If checked, this post won't be automatically added to the Bluedon queue when published.
+            </p>
+        <?php endif; ?>
         <?php
+    }
+
+    /**
+     * Rebuild the post text of queued (not yet posted) items for a post
+     */
+    private function refresh_queued_text($post_id) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'bluesky_queue';
+        $ids = $wpdb->get_col($wpdb->prepare(
+            "SELECT id FROM $table WHERE blog_post_id = %d AND status = 'queued'",
+            $post_id
+        ));
+        if (empty($ids)) return;
+
+        $data = WPBQ_Queue_Manager::build_post_data_from_post(get_post($post_id));
+        foreach ($ids as $id) {
+            WPBQ_Queue_Manager::update_item($id, array('post_text' => $data['text']));
+            WPBQ_Queue_Manager::log($id, 'blurb_updated', 'Post text rebuilt after social blurb changed (Post #' . $post_id . ')');
+        }
     }
 
     /**
@@ -205,6 +211,28 @@ class WPBQ_Auto_Queue {
         if (!wp_verify_nonce($_POST['wpbq_meta_box_nonce'], 'wpbq_meta_box')) return;
         if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
         if (!current_user_can('edit_post', $post_id)) return;
+
+        $old_blurb = (string) get_post_meta($post_id, '_wpbq_social_blurb', true);
+        $blurb = isset($_POST['wpbq_social_blurb'])
+            ? trim(sanitize_textarea_field(wp_unslash($_POST['wpbq_social_blurb'])))
+            : '';
+        if ($blurb !== '') {
+            update_post_meta($post_id, '_wpbq_social_blurb', $blurb);
+        } else {
+            delete_post_meta($post_id, '_wpbq_social_blurb');
+        }
+
+        // Auto-queue runs on publish, before meta boxes are saved (the block
+        // editor saves them in a separate request afterwards), so a blurb
+        // typed right before publishing would be missed. Rebuild the text of
+        // any still-queued item for this post when the blurb changes.
+        if ($blurb !== $old_blurb) {
+            $this->refresh_queued_text($post_id);
+        }
+
+        // The checkbox is only rendered while auto-queue is enabled; don't
+        // clear a saved opt-out just because it wasn't on the form.
+        if (!get_option('wpbq_auto_queue_enabled', false)) return;
 
         if (isset($_POST['wpbq_skip_auto_queue'])) {
             update_post_meta($post_id, '_wpbq_skip_auto_queue', 1);
