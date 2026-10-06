@@ -213,7 +213,16 @@ class WPBQ_Cron_Handler {
         }
 
         // ---- BUFFER (fans out to whatever networks are connected there) ----
-        if (get_option('wpbq_buffer_enabled', false)) {
+        $skip_buffer = get_option('wpbq_buffer_enabled', false)
+            && get_option('wpbq_buffer_skip_revived', false)
+            && WPBQ_Queue_Manager::is_revived_item($item->id);
+        if ($skip_buffer) {
+            WPBQ_Queue_Manager::log($item->id, 'buffer_skipped', 'Revived post not sent to Buffer (per settings)');
+            if (!$any_success && empty($all_errors)) {
+                // Buffer was the only platform enabled — nothing was attempted
+                $all_errors[] = 'Buffer: skipped for revived posts and no other platform is enabled';
+            }
+        } elseif (get_option('wpbq_buffer_enabled', false)) {
             $buffer_api = new WPBQ_Buffer_API();
             $buffer_result = $buffer_api->create_post(
                 $item->post_text,

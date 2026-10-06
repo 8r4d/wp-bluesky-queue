@@ -103,7 +103,9 @@ class WPBQ_Auto_Queue {
         // by archive imports and revivals.
         $allowed_types = get_option('wpbq_auto_queue_post_types', array('post'));
         if (!is_array($allowed_types)) $allowed_types = array('post');
-        $allowed_types = array_unique(array_merge(array('post'), $allowed_types));
+        $revival_types = get_option('wpbq_revival_post_types', array('post'));
+        if (!is_array($revival_types)) $revival_types = array('post');
+        $allowed_types = array_unique(array_merge(array('post'), $allowed_types, $revival_types));
 
         add_meta_box(
             'wpbq_auto_queue',
@@ -122,6 +124,7 @@ class WPBQ_Auto_Queue {
         wp_nonce_field('wpbq_meta_box', 'wpbq_meta_box_nonce');
 
         $skip  = get_post_meta($post->ID, '_wpbq_skip_auto_queue', true);
+        $skip_revival = get_post_meta($post->ID, '_wpbq_skip_revival', true);
         $blurb = get_post_meta($post->ID, '_wpbq_social_blurb', true);
 
         global $wpdb;
@@ -170,6 +173,15 @@ class WPBQ_Auto_Queue {
             update();
         })();
         </script>
+
+        <hr>
+        <label>
+            <input type="checkbox" name="wpbq_skip_revival" value="1" <?php checked($skip_revival, 1); ?>>
+            <strong>Never revive</strong> this post
+        </label>
+        <p class="description" style="margin-top:8px;">
+            If checked, this post won't be picked when old posts are randomly re-shared from the archive.
+        </p>
 
         <?php if (get_option('wpbq_auto_queue_enabled', false)) : ?>
             <hr>
@@ -228,6 +240,12 @@ class WPBQ_Auto_Queue {
         // any still-queued item for this post when the blurb changes.
         if ($blurb !== $old_blurb) {
             $this->refresh_queued_text($post_id);
+        }
+
+        if (isset($_POST['wpbq_skip_revival'])) {
+            update_post_meta($post_id, '_wpbq_skip_revival', 1);
+        } else {
+            delete_post_meta($post_id, '_wpbq_skip_revival');
         }
 
         // The checkbox is only rendered while auto-queue is enabled; don't

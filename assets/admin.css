@@ -248,6 +248,11 @@
     color: #d93025;
 }
 
+.wpbq-log-buffer_skipped {
+    background: #f0f0f1;
+    color: #50575e;
+}
+
 
 .wpbq-log-revived {
     background: #fff4e5;

@@ -295,6 +295,13 @@ class WPBQ_Queue_Manager {
                     'column'    => 'post_date_gmt',
                 ),
             ),
+            // Posts flagged "never revive" in the post editor sidebar
+            'meta_query'     => array(
+                array(
+                    'key'     => '_wpbq_skip_revival',
+                    'compare' => 'NOT EXISTS',
+                ),
+            ),
         );
  
         if (!empty($exclude)) {
@@ -357,6 +364,19 @@ class WPBQ_Queue_Manager {
         );
     }
  
+    /**
+     * Whether a queue item was added by the archive revival job
+     */
+    public static function is_revived_item($queue_id) {
+        global $wpdb;
+        self::init();
+
+        return (bool) $wpdb->get_var($wpdb->prepare(
+            "SELECT 1 FROM " . self::$log_table . " WHERE queue_id = %d AND action = 'revived' LIMIT 1",
+            $queue_id
+        ));
+    }
+
     /**
      * How many posts have been revived from the archive today (UTC)
      */

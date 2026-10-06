@@ -175,6 +175,7 @@ class WPBQ_Admin_Page {
 
         // Buffer
         register_setting($group, 'wpbq_buffer_enabled', 'absint');
+        register_setting($group, 'wpbq_buffer_skip_revived', 'absint');
         register_setting($group, 'wpbq_buffer_api_key', array(
             'sanitize_callback' => function($value) {
                 return trim($value);
@@ -692,20 +693,22 @@ if (isset($_POST['wpbq_run_cron']) && wp_verify_nonce($_POST['_wpnonce'], 'wpbq_
         if (!isset($post_types[$post_type])) $post_type = 'post';
 
         $checks  = $this->get_metadata_checks($post_type);
+        $flags   = $this->get_metadata_flags();
         $missing = isset($_GET['missing']) ? sanitize_key($_GET['missing']) : 'any';
-        if ($missing !== 'any' && !isset($checks[$missing])) $missing = 'any';
+        if ($missing !== 'any' && !isset($checks[$missing]) && !isset($flags[$missing])) $missing = 'any';
 
         $per_page = 50;
         $paged    = max(1, isset($_GET['paged']) ? absint($_GET['paged']) : 1);
-        $counts   = $this->get_metadata_counts($post_type, $checks);
+        $counts   = $this->get_metadata_counts($post_type, $checks, $flags);
         $total    = $counts[$missing];
-        $rows     = $this->get_metadata_rows($post_type, $checks, $missing, $per_page, ($paged - 1) * $per_page);
+        $rows     = $this->get_metadata_rows($post_type, $checks, $flags, $missing, $per_page, ($paged - 1) * $per_page);
 
         $base_url = add_query_arg(array('page' => 'wpbq-metadata', 'wpbq_post_type' => $post_type), admin_url('admin.php'));
         $labels   = array(
             'blurb'   => '💬 Missing Blurb',
             'excerpt' => '📄 Missing Excerpt',
             'tags'    => '🏷️ Missing Tags',
+            'no_revive' => '🚫 Never Revive',
         );
         ?>
         <div class="wrap wpbq-wrap">
@@ -732,6 +735,11 @@ if (isset($_POST['wpbq_run_cron']) && wp_verify_nonce($_POST['_wpnonce'], 'wpbq_
                         <?php echo $labels[$key]; ?>: <strong><?php echo $counts[$key]; ?></strong>
                     </a>
                 <?php endforeach; ?>
+                <?php foreach ($flags as $key => $sql) : ?>
+                    <a href="<?php echo esc_url(add_query_arg('missing', $key, $base_url)); ?>" class="wpbq-stat <?php echo $missing === $key ? 'active' : ''; ?>">
+                        <?php echo $labels[$key]; ?>: <strong><?php echo $counts[$key]; ?></strong>
+                    </a>
+                <?php endforeach; ?>
             </div>
 
             <table class="wp-list-table widefat fixed striped">
@@ -742,11 +750,12 @@ if (isset($_POST['wpbq_run_cron']) && wp_verify_nonce($_POST['_wpnonce'], 'wpbq_
                         <?php foreach ($checks as $key => $sql) : ?>
                             <th width="90" class="wpbq-meta-col"><?php echo esc_html(ucfirst($key)); ?></th>
                         <?php endforeach; ?>
+                        <th width="90" class="wpbq-meta-col">Revive</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($rows)) : ?>
-                        <tr><td colspan="<?php echo 2 + count($checks); ?>">🎉 Nothing missing here.</td></tr>
+                        <tr><td colspan="<?php echo 3 + count($checks); ?>"><?php echo isset($flags[$missing]) ? 'No posts flagged.' : '🎉 Nothing missing here.'; ?></td></tr>
                     <?php else : ?>
                         <?php foreach ($rows as $row) : ?>
                             <tr>
@@ -759,6 +768,9 @@ if (isset($_POST['wpbq_run_cron']) && wp_verify_nonce($_POST['_wpnonce'], 'wpbq_
                                         <?php echo $row->{'missing_' . $key} ? '<span class="wpbq-meta-missing" title="Missing">✗</span>' : '<span class="wpbq-meta-ok" title="OK">✓</span>'; ?>
                                     </td>
                                 <?php endforeach; ?>
+                                <td class="wpbq-meta-col">
+                                    <?php echo $row->no_revive ? '<span title="Never revive is checked">🚫</span>' : '<span class="wpbq-meta-ok" title="Can be revived">✓</span>'; ?>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
@@ -804,11 +816,25 @@ if (isset($_POST['wpbq_run_cron']) && wp_verify_nonce($_POST['_wpnonce'], 'wpbq_
         return $checks;
     }
 
-    private function get_metadata_counts($post_type, $checks) {
+    /**
+     * SQL conditions for per-post settings shown on the metadata page. Unlike
+     * checks, these are choices rather than gaps, so they don't count
+     * toward "Missing Anything".
+     */
+    private function get_metadata_flags() {
+        global $wpdb;
+
+        return array(
+            'no_revive' => "EXISTS (SELECT 1 FROM {$wpdb->postmeta} pm
+                        WHERE pm.post_id = p.ID AND pm.meta_key = '_wpbq_skip_revival')",
+        );
+    }
+
+    private function get_metadata_counts($post_type, $checks, $flags) {
         global $wpdb;
 
         $sums = array('COUNT(*) AS total', 'SUM(' . implode(' OR ', $checks) . ') AS `any`');
-        foreach ($checks as $key => $sql) {
+        foreach ($checks + $flags as $key => $sql) {
             $sums[] = "SUM($sql) AS `$key`";
         }
 
@@ -821,14 +847,22 @@ if (isset($_POST['wpbq_run_cron']) && wp_verify_nonce($_POST['_wpnonce'], 'wpbq_
         return array_map('intval', $row ?: array());
     }
 
-    private function get_metadata_rows($post_type, $checks, $missing, $limit, $offset) {
+    private function get_metadata_rows($post_type, $checks, $flags, $missing, $limit, $offset) {
         global $wpdb;
 
         $cols = array();
         foreach ($checks as $key => $sql) {
             $cols[] = "($sql) AS missing_$key";
         }
-        $where = $missing === 'any' ? implode(' OR ', $checks) : $checks[$missing];
+        foreach ($flags as $key => $sql) {
+            $cols[] = "($sql) AS $key";
+        }
+
+        if ($missing === 'any') {
+            $where = implode(' OR ', $checks);
+        } else {
+            $where = isset($checks[$missing]) ? $checks[$missing] : $flags[$missing];
+        }
 
         return $wpdb->get_results($wpdb->prepare(
             "SELECT p.ID, p.post_title, p.post_date_gmt, " . implode(', ', $cols) . "
@@ -1051,6 +1085,13 @@ if (isset($_POST['wpbq_run_cron']) && wp_verify_nonce($_POST['_wpnonce'], 'wpbq_
                                         <?php checked(get_option('wpbq_buffer_enabled'), 1); ?>>
                                     Also send posts to Buffer when processing queue
                                 </label>
+                                <br>
+                                <label>
+                                    <input type="checkbox" name="wpbq_buffer_skip_revived" value="1"
+                                        <?php checked(get_option('wpbq_buffer_skip_revived'), 1); ?>>
+                                    Don't send revived archive posts to Buffer
+                                </label>
+                                <p class="description">Revived posts still go to Bluesky and Mastodon — handy if revivals are pushing you over Buffer's post limit.</p>
                             </td>
                         </tr>
                         <tr>
