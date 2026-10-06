@@ -535,8 +535,9 @@ class WPBQ_Queue_Manager {
      * (we add the # prefix)
      */
     private static function format_hashtag($text) {
-        // Remove special characters, keep letters, numbers, underscores
-        $tag = preg_replace('/[^\p{L}\p{N}_]/u', '', $text);
+        // Term names are stored HTML-escaped ("Arts &amp; Crafts"); decode so
+        // the "&" gets stripped below instead of leaving "amp" in the tag
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
         // Convert spaces/hyphens to CamelCase
         // e.g., "web development" -> "WebDevelopment"
