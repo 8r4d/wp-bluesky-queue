@@ -654,7 +654,7 @@ if (isset($_POST['wpbq_run_cron']) && wp_verify_nonce($_POST['_wpnonce'], 'wpbq_
                     <tr>
                         <th>Max Posts to Import</th>
                         <td>
-                            <input type="number" name="max_posts" value="50" min="1" max="500">
+                            <input type="number" name="max_posts" value="5" min="1" max="500">
                             <p class="description">Posts already in the queue will be skipped.</p>
                         </td>
                     </tr>
