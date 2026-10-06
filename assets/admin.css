@@ -319,3 +319,17 @@
         margin: 0 4px 4px 0;
     }
 }
+/* Post Metadata page */
+.wpbq-meta-col {
+    text-align: center !important;
+}
+
+.wpbq-meta-ok {
+    color: #00a32a;
+    font-weight: 600;
+}
+
+.wpbq-meta-missing {
+    color: #d63638;
+    font-weight: 600;
+}

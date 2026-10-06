@@ -110,6 +110,15 @@ class WPBQ_Admin_Page {
 
         add_submenu_page(
             'wpbq-queue',
+            'Post Metadata',
+            'Metadata',
+            'manage_options',
+            'wpbq-metadata',
+            array($this, 'render_metadata_page')
+        );
+
+        add_submenu_page(
+            'wpbq-queue',
             'Activity Log',
             'Activity Log',
             'manage_options',
@@ -668,6 +677,167 @@ if (isset($_POST['wpbq_run_cron']) && wp_verify_nonce($_POST['_wpnonce'], 'wpbq_
             </form>
         </div>
         <?php
+    }
+
+    /**
+     * METADATA PAGE — published posts missing a social blurb, excerpt or tags
+     */
+    public function render_metadata_page() {
+        $post_types = get_post_types(array('public' => true), 'objects');
+        unset($post_types['attachment']);
+
+        // Not 'post_type': WordPress reads that on admin.php to pick the parent
+        // menu, and fails with "Cannot load wpbq-metadata" for non-post types
+        $post_type = isset($_GET['wpbq_post_type']) ? sanitize_key($_GET['wpbq_post_type']) : 'post';
+        if (!isset($post_types[$post_type])) $post_type = 'post';
+
+        $checks  = $this->get_metadata_checks($post_type);
+        $missing = isset($_GET['missing']) ? sanitize_key($_GET['missing']) : 'any';
+        if ($missing !== 'any' && !isset($checks[$missing])) $missing = 'any';
+
+        $per_page = 50;
+        $paged    = max(1, isset($_GET['paged']) ? absint($_GET['paged']) : 1);
+        $counts   = $this->get_metadata_counts($post_type, $checks);
+        $total    = $counts[$missing];
+        $rows     = $this->get_metadata_rows($post_type, $checks, $missing, $per_page, ($paged - 1) * $per_page);
+
+        $base_url = add_query_arg(array('page' => 'wpbq-metadata', 'wpbq_post_type' => $post_type), admin_url('admin.php'));
+        $labels   = array(
+            'blurb'   => '💬 Missing Blurb',
+            'excerpt' => '📄 Missing Excerpt',
+            'tags'    => '🏷️ Missing Tags',
+        );
+        ?>
+        <div class="wrap wpbq-wrap">
+            <h1>🩺 Post Metadata</h1>
+            <p>Published posts that are missing a social blurb, a hand-written excerpt or tags. Without a blurb or excerpt, social posts fall back to the first 20 words of the post; without tags, they get no hashtags.</p>
+
+            <form method="get">
+                <input type="hidden" name="page" value="wpbq-metadata">
+                <label>Post Type:
+                    <select name="wpbq_post_type" onchange="this.form.submit()">
+                        <?php foreach ($post_types as $type) : ?>
+                            <option value="<?php echo esc_attr($type->name); ?>" <?php selected($post_type, $type->name); ?>><?php echo esc_html($type->label); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+            </form>
+
+            <div class="wpbq-stats">
+                <a href="<?php echo esc_url(add_query_arg('missing', 'any', $base_url)); ?>" class="wpbq-stat <?php echo $missing === 'any' ? 'active' : ''; ?>">
+                    ⚠️ Missing Anything: <strong><?php echo $counts['any']; ?></strong> / <?php echo $counts['total']; ?>
+                </a>
+                <?php foreach ($checks as $key => $sql) : ?>
+                    <a href="<?php echo esc_url(add_query_arg('missing', $key, $base_url)); ?>" class="wpbq-stat <?php echo $missing === $key ? 'active' : ''; ?>">
+                        <?php echo $labels[$key]; ?>: <strong><?php echo $counts[$key]; ?></strong>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+
+            <table class="wp-list-table widefat fixed striped">
+                <thead>
+                    <tr>
+                        <th>Post</th>
+                        <th width="110">Published</th>
+                        <?php foreach ($checks as $key => $sql) : ?>
+                            <th width="90" class="wpbq-meta-col"><?php echo esc_html(ucfirst($key)); ?></th>
+                        <?php endforeach; ?>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($rows)) : ?>
+                        <tr><td colspan="<?php echo 2 + count($checks); ?>">🎉 Nothing missing here.</td></tr>
+                    <?php else : ?>
+                        <?php foreach ($rows as $row) : ?>
+                            <tr>
+                                <td>
+                                    <a href="<?php echo esc_url(get_edit_post_link($row->ID)); ?>"><strong><?php echo esc_html($row->post_title !== '' ? $row->post_title : '(no title)'); ?></strong></a>
+                                </td>
+                                <td><?php echo esc_html(wp_date('M j, Y', strtotime($row->post_date_gmt . ' UTC'))); ?></td>
+                                <?php foreach ($checks as $key => $sql) : ?>
+                                    <td class="wpbq-meta-col">
+                                        <?php echo $row->{'missing_' . $key} ? '<span class="wpbq-meta-missing" title="Missing">✗</span>' : '<span class="wpbq-meta-ok" title="OK">✓</span>'; ?>
+                                    </td>
+                                <?php endforeach; ?>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+
+            <?php
+            $pages = (int) ceil($total / $per_page);
+            if ($pages > 1) {
+                echo '<div class="tablenav"><div class="tablenav-pages">';
+                echo paginate_links(array(
+                    'base'    => add_query_arg('paged', '%#%', add_query_arg('missing', $missing, $base_url)),
+                    'format'  => '',
+                    'current' => $paged,
+                    'total'   => $pages,
+                ));
+                echo '</div></div>';
+            }
+            ?>
+        </div>
+        <?php
+    }
+
+    /**
+     * SQL conditions (true = missing) for each metadata check that applies
+     * to the post type. Excerpts and tags are skipped for types without them.
+     */
+    private function get_metadata_checks($post_type) {
+        global $wpdb;
+
+        $checks = array(
+            'blurb' => "NOT EXISTS (SELECT 1 FROM {$wpdb->postmeta} pm
+                        WHERE pm.post_id = p.ID AND pm.meta_key = '_wpbq_social_blurb' AND TRIM(pm.meta_value) <> '')",
+        );
+        if (post_type_supports($post_type, 'excerpt')) {
+            $checks['excerpt'] = "TRIM(p.post_excerpt) = ''";
+        }
+        if (is_object_in_taxonomy($post_type, 'post_tag')) {
+            $checks['tags'] = "NOT EXISTS (SELECT 1 FROM {$wpdb->term_relationships} tr
+                        INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_taxonomy_id = tr.term_taxonomy_id
+                        WHERE tr.object_id = p.ID AND tt.taxonomy = 'post_tag')";
+        }
+        return $checks;
+    }
+
+    private function get_metadata_counts($post_type, $checks) {
+        global $wpdb;
+
+        $sums = array('COUNT(*) AS total', 'SUM(' . implode(' OR ', $checks) . ') AS `any`');
+        foreach ($checks as $key => $sql) {
+            $sums[] = "SUM($sql) AS `$key`";
+        }
+
+        $row = $wpdb->get_row($wpdb->prepare(
+            "SELECT " . implode(', ', $sums) . " FROM {$wpdb->posts} p
+             WHERE p.post_type = %s AND p.post_status = 'publish'",
+            $post_type
+        ), ARRAY_A);
+
+        return array_map('intval', $row ?: array());
+    }
+
+    private function get_metadata_rows($post_type, $checks, $missing, $limit, $offset) {
+        global $wpdb;
+
+        $cols = array();
+        foreach ($checks as $key => $sql) {
+            $cols[] = "($sql) AS missing_$key";
+        }
+        $where = $missing === 'any' ? implode(' OR ', $checks) : $checks[$missing];
+
+        return $wpdb->get_results($wpdb->prepare(
+            "SELECT p.ID, p.post_title, p.post_date_gmt, " . implode(', ', $cols) . "
+             FROM {$wpdb->posts} p
+             WHERE p.post_type = %s AND p.post_status = 'publish' AND ($where)
+             ORDER BY p.post_date_gmt DESC
+             LIMIT %d OFFSET %d",
+            $post_type, $limit, $offset
+        ));
     }
 
     /**
