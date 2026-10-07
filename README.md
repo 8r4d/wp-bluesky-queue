@@ -24,15 +24,17 @@ Supports direct API connection to Bluesky & Mastadon for direct posting from you
 
 Supports connection to Buffer for third party queuing to multiple other platforms.
 
-Auto-queues posts on publish or scheduled publish or manually import old posts into an editable queue that will fire based on a wp-cron to post simultaneously to authenticated social networks as per the settings.
+Auto-queues posts on publish or scheduled publish. Or you can manually import old posts into the same editable queue. The queue will fire/post based on a wp-cron to post simultaneously to authenticated social networks (as per the settings.)
 
-Set up a randomizer that will randomly post from the queue at a possibility percentage each time the 5 minute cron is activated (ie after 1 hour, a post has a x% chance of being sent at each 5 minute cron increment). 
-
-Format posts, include hashtags, and automatically generate hashtags from metadata in the posts. You can define multiple post templates that then will be used randomly to format the auto-generation of posts for the queue. Add queue-specific metadata "blurbs" to each post.
-
-Schedule free-form manually written social media posts written using the queue page that include text, a link, a published post, or an image to be embedded into the post and delievered at a scheduled date and time. Ie. Use it like a posting buffer/scheduler for general posting to your feed.
+You can set up a randomizer that will randomly post from the queue at a possibility percentage each time the 5 minute cron is activated (ie after 1 hour, a post has a x% chance of being sent at each 5 minute cron increment). 
 
 Randomly revive old posts based on variables, date-windows, and frequencies, adding older content to the posting queue. Individual posts can be flagged "do not revive."
+
+Automatically format posts, include hashtags, and generate hashtags from metadata (tags/categories) in the posts. 
+
+Define multiple post templates that then will be used randomly to format the auto-generation of posts for the queue, using {title}, {excerpt}, {blurb}, and {url}. Add queue-specific metadata "blurbs" are an extra text field available to each post for generating social-friendly descriptors.
+
+Schedule any other kind of free-form manually written social media posts (written using the queue page editor) that can include text, a link, a published post, or an image to be embedded into the post and delievered at a scheduled date and time. Ie. You can also use it like a posting buffer/scheduler for general posting to your feed.
 
 Includes a handy metadata checklist report page to see which of your posts are optimized for social sharing.
 
