@@ -13,6 +13,7 @@ class WPBQ_Admin_Page {
         add_action('wp_ajax_wpbq_import_archives', array($this, 'ajax_import_archives'));
         add_action('wp_ajax_wpbq_test_connection', array($this, 'ajax_test_connection'));
         add_action('wp_ajax_wpbq_requeue_item', array($this, 'ajax_requeue_item'));
+        add_action('wp_ajax_wpbq_edit_queue_item', array($this, 'ajax_edit_item'));
         add_action('wp_ajax_wpbq_update_order', array($this, 'ajax_update_order'));
         add_action('wp_ajax_wpbq_debug_image', array($this, 'ajax_debug_image'));
         add_action('wp_ajax_wpbq_test_mastodon', array($this, 'ajax_test_mastodon'));
@@ -478,9 +479,8 @@ if (isset($_POST['wpbq_run_cron']) && wp_verify_nonce($_POST['_wpnonce'], 'wpbq_
                         <?php foreach ($items as $item) : ?>
                             <tr data-id="<?php echo esc_attr($item->id); ?>">
                                 <td class="wpbq-drag-handle">☰</td>
-                                <td>
-                                    <strong><?php echo esc_html(mb_substr($item->post_text, 0, 100)); ?></strong>
-                                    <?php if (mb_strlen($item->post_text) > 100) echo '...'; ?>
+                                <td class="wpbq-item-text-cell" data-text="<?php echo esc_attr($item->post_text); ?>">
+                                    <strong class="wpbq-item-preview"><?php echo esc_html(mb_substr($item->post_text, 0, 100)); ?><?php if (mb_strlen($item->post_text) > 100) echo '...'; ?></strong>
                                     <?php if ($item->blog_post_id) : ?>
                                         <br><small>📝 Blog Post #<?php echo $item->blog_post_id; ?></small>
                                     <?php endif; ?>
@@ -510,6 +510,9 @@ if (isset($_POST['wpbq_run_cron']) && wp_verify_nonce($_POST['_wpnonce'], 'wpbq_
                                     <?php if ($item->status === 'queued') : ?>
                                         <button class="button button-small wpbq-post-now" data-id="<?php echo $item->id; ?>">
                                             🚀 Post Now
+                                        </button>
+                                        <button class="button button-small wpbq-edit" data-id="<?php echo $item->id; ?>">
+                                            ✏️ Edit
                                         </button>
                                     <?php endif; ?>
                                     <?php if ($item->status === 'failed' || $item->status === 'posted') : ?>
@@ -1574,6 +1577,26 @@ if (isset($_POST['wpbq_run_cron']) && wp_verify_nonce($_POST['_wpnonce'], 'wpbq_
         ));
         WPBQ_Queue_Manager::log($id, 'requeued', 'Item returned to queue');
         wp_send_json_success('Re-queued!');
+    }
+
+    public function ajax_edit_item() {
+        check_ajax_referer('wpbq_nonce', 'nonce');
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+
+        $id   = absint($_POST['id']);
+        $text = sanitize_textarea_field(wp_unslash($_POST['post_text']));
+        if ($text === '') wp_send_json_error('Post text is required.');
+
+        // Only queued items are editable — cron may have posted it meanwhile.
+        // sort_order is left untouched so the item keeps its place in line.
+        $item = WPBQ_Queue_Manager::get_item($id);
+        if (!$item || $item->status !== 'queued') {
+            wp_send_json_error('This item is no longer queued.');
+        }
+
+        WPBQ_Queue_Manager::update_item($id, array('post_text' => $text));
+        WPBQ_Queue_Manager::log($id, 'edited', 'Post text edited manually');
+        wp_send_json_success(array('post_text' => $text));
     }
 
     public function ajax_import_archives() {

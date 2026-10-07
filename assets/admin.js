@@ -152,6 +152,74 @@
         });
     });
 
+    // =====================
+    // Edit Item Text (AJAX)
+    // =====================
+    $(document).on('click', '.wpbq-edit', function() {
+        var $cell = $(this).closest('tr').find('.wpbq-item-text-cell');
+        if ($cell.find('.wpbq-edit-form').length) return;
+
+        var $form = $(
+            '<div class="wpbq-edit-form">' +
+                '<textarea rows="4" class="large-text" maxlength="300"></textarea>' +
+                '<p class="description">Characters: <span class="wpbq-edit-count">0</span>/300</p>' +
+                '<button type="button" class="button button-primary button-small wpbq-edit-save">Save</button> ' +
+                '<button type="button" class="button button-small wpbq-edit-cancel">Cancel</button>' +
+            '</div>'
+        );
+        $form.find('textarea').val($cell.data('text'));
+        $cell.find('.wpbq-item-preview').hide();
+        $cell.prepend($form);
+        $form.find('textarea').trigger('input').focus();
+    });
+
+    $(document).on('input', '.wpbq-edit-form textarea', function() {
+        var len = $(this).val().length;
+        var $counter = $(this).siblings('.description').find('.wpbq-edit-count');
+        $counter.text(len).removeClass('warning danger');
+        if (len > 280) {
+            $counter.addClass('danger');
+        } else if (len > 250) {
+            $counter.addClass('warning');
+        }
+    });
+
+    $(document).on('click', '.wpbq-edit-cancel', function() {
+        var $cell = $(this).closest('.wpbq-item-text-cell');
+        $cell.find('.wpbq-edit-form').remove();
+        $cell.find('.wpbq-item-preview').show();
+    });
+
+    $(document).on('click', '.wpbq-edit-save', function() {
+        var $btn = $(this);
+        var $cell = $btn.closest('.wpbq-item-text-cell');
+        var id = $btn.closest('tr').data('id');
+        var text = $cell.find('.wpbq-edit-form textarea').val();
+
+        $btn.prop('disabled', true).text('Saving...');
+
+        $.post(wpbq.ajax_url, {
+            action: 'wpbq_edit_queue_item',
+            nonce: wpbq.nonce,
+            id: id,
+            post_text: text
+        }, function(response) {
+            if (response.success) {
+                var saved = response.data.post_text;
+                var preview = saved.length > 100 ? saved.substr(0, 100) + '...' : saved;
+                $cell.data('text', saved);
+                $cell.find('.wpbq-item-preview').text(preview).show();
+                $cell.find('.wpbq-edit-form').remove();
+            } else {
+                alert('❌ ' + response.data);
+                $btn.prop('disabled', false).text('Save');
+            }
+        }).fail(function() {
+            alert('❌ Network error.');
+            $btn.prop('disabled', false).text('Save');
+        });
+    });
+
 
 
 

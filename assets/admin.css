@@ -335,6 +335,19 @@
 }
 
 .wpbq-meta-missing {
-    color: #d63638;
+    color: #d93025;
     font-weight: 600;
+}
+
+/* Inline queue item editor */
+.wpbq-edit-form textarea {
+    margin-bottom: 4px;
+}
+
+.wpbq-edit-count.warning {
+    color: #f9ab00;
+}
+
+.wpbq-edit-count.danger {
+    color: #d93025;
 }
