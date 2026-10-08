@@ -280,6 +280,114 @@
     });
 
     // =====================
+    // Bulk Import CSV / JSON (AJAX)
+    // =====================
+    function wpbqEsc(str) {
+        return $('<div>').text(str == null ? '' : String(str)).html();
+    }
+
+    // Any edit to the data invalidates the last preview
+    function wpbqBulkReset() {
+        $('#wpbq-bulk-import-btn').prop('disabled', true);
+        $('#wpbq-bulk-results').empty();
+        $('#wpbq-bulk-status').removeClass('success error').text('');
+    }
+
+    $('#wpbq-bulk-file').on('change', function() {
+        var file = this.files && this.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            $('#wpbq-bulk-data').val(e.target.result);
+            wpbqBulkReset();
+        };
+        reader.readAsText(file);
+    });
+
+    $('#wpbq-bulk-data, #wpbq-bulk-skip-dupes').on('input change', wpbqBulkReset);
+
+    $('#wpbq-bulk-sample').on('click', function(e) {
+        e.preventDefault();
+        var csv = 'post_text,link_url,image_url,scheduled_at,blog_post_id\n' +
+            '"Sequential post, added to the end of the queue",https://example.com/,,,\n' +
+            '"Scheduled post with an image",https://example.com/page,https://example.com/image.jpg,2030-01-15 09:30,\n' +
+            ',,,,123\n';
+        var url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+        $('<a>').attr({ href: url, download: 'bluedon-queue-sample.csv' })[0].click();
+        setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+    });
+
+    function wpbqBulkRequest(dryRun) {
+        var $status = $('#wpbq-bulk-status');
+        $('#wpbq-bulk-preview-btn, #wpbq-bulk-import-btn').prop('disabled', true);
+        $status.removeClass('success error').text(dryRun ? 'Checking...' : 'Importing...');
+
+        $.post(wpbq.ajax_url, {
+            action: 'wpbq_bulk_import',
+            nonce: wpbq.nonce,
+            data: $('#wpbq-bulk-data').val(),
+            dry_run: dryRun ? 1 : 0,
+            skip_duplicates: $('#wpbq-bulk-skip-dupes').is(':checked') ? 1 : 0
+        }, function(response) {
+            if (!response.success) {
+                $status.addClass('error').text('❌ ' + response.data);
+                $('#wpbq-bulk-results').empty();
+                return;
+            }
+            var d = response.data, c = d.counts;
+            wpbqRenderBulkResults(d);
+            if (dryRun) {
+                $status.addClass(c.ok ? 'success' : 'error').text(
+                    c.ok + ' ready to import, ' + c.skipped + ' skipped, ' + c.error + ' with errors.'
+                );
+                $('#wpbq-bulk-import-btn').prop('disabled', !c.ok);
+            } else {
+                $status.addClass('success').text('✅ ' + c.ok + ' posts added to the queue.');
+            }
+        }).fail(function() {
+            $status.addClass('error').text('❌ Network error.');
+        }).always(function() {
+            $('#wpbq-bulk-preview-btn').prop('disabled', false);
+            if (!dryRun) $('#wpbq-bulk-import-btn').prop('disabled', true);
+        });
+    }
+
+    function wpbqRenderBulkResults(d) {
+        var labels = d.dry_run
+            ? { ok: '✅ Ready', skipped: '⏭️ Skip', error: '❌ Error' }
+            : { ok: '✅ Added', skipped: '⏭️ Skipped', error: '❌ Error' };
+        var html = '';
+        $.each(d.warnings || [], function(_, w) {
+            html += '<div class="notice notice-warning inline"><p>' + wpbqEsc(w) + '</p></div>';
+        });
+        html += '<table class="wp-list-table widefat fixed striped wpbq-bulk-table"><thead><tr>' +
+            '<th width="50">Row</th><th width="100">Result</th><th>Post Text</th>' +
+            '<th width="200">Link</th><th width="150">Schedule</th><th width="220">Notes</th>' +
+            '</tr></thead><tbody>';
+        $.each(d.rows, function(_, r) {
+            html += '<tr class="wpbq-bulk-' + r.status + '">' +
+                '<td>' + wpbqEsc(r.row) + '</td>' +
+                '<td>' + labels[r.status] + '</td>' +
+                '<td class="wpbq-bulk-text">' + wpbqEsc(r.post_text) + '</td>' +
+                '<td>' + wpbqEsc(r.link_url || '—') + '</td>' +
+                '<td>' + wpbqEsc(r.status === 'error' ? '' : r.schedule_display) + '</td>' +
+                '<td>' + wpbqEsc(r.message) + '</td>' +
+                '</tr>';
+        });
+        html += '</tbody></table>';
+        $('#wpbq-bulk-results').html(html);
+    }
+
+    $('#wpbq-bulk-form').on('submit', function(e) {
+        e.preventDefault();
+        wpbqBulkRequest(true);
+    });
+
+    $('#wpbq-bulk-import-btn').on('click', function() {
+        wpbqBulkRequest(false);
+    });
+
+    // =====================
     // Test Connection (AJAX)
     // =====================
     $('#wpbq-test-connection').on('click', function() {

@@ -183,6 +183,37 @@
     color: #d93025;
 }
 
+/* Bulk import */
+#wpbq-bulk-status {
+    margin-left: 15px;
+    font-weight: 600;
+}
+
+#wpbq-bulk-status.success {
+    color: #1e8e3e;
+}
+
+#wpbq-bulk-status.error {
+    color: #d93025;
+}
+
+.wpbq-bulk-table {
+    margin-top: 10px;
+}
+
+.wpbq-bulk-table .wpbq-bulk-text {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.wpbq-bulk-table tr.wpbq-bulk-error td {
+    background: #fce8e6;
+}
+
+.wpbq-bulk-table tr.wpbq-bulk-skipped td {
+    color: #666;
+}
+
 /* Test connection */
 #wpbq-test-result {
     margin-left: 10px;

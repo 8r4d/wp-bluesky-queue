@@ -36,6 +36,8 @@ Define multiple post templates that then will be used randomly to format the aut
 
 Schedule any other kind of free-form manually written social media posts (written using the queue page editor) that can include text, a link, a published post, or an image to be embedded into the post and delievered at a scheduled date and time. Ie. You can also use it like a posting buffer/scheduler for general posting to your feed.
 
+Bulk import posts into the queue from a CSV or JSON file (or pasted text) with columns for post_text, link_url, image_url, scheduled_at, and blog_post_id. Preview and validate every row before importing; rows with just a blog_post_id get their text from your post templates, and duplicates of already-queued posts are skipped.
+
 Includes a handy metadata checklist report page to see which of your posts are optimized for social sharing.
 
 Stores a robust activity log and you can set an the archive window for retaining posting history (default 30 days).

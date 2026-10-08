@@ -11,6 +11,7 @@ class WPBQ_Admin_Page {
         add_action('wp_ajax_wpbq_delete_queue_item', array($this, 'ajax_delete_item'));
         add_action('wp_ajax_wpbq_post_now', array($this, 'ajax_post_now'));
         add_action('wp_ajax_wpbq_import_archives', array($this, 'ajax_import_archives'));
+        add_action('wp_ajax_wpbq_bulk_import', array($this, 'ajax_bulk_import'));
         add_action('wp_ajax_wpbq_test_connection', array($this, 'ajax_test_connection'));
         add_action('wp_ajax_wpbq_requeue_item', array($this, 'ajax_requeue_item'));
         add_action('wp_ajax_wpbq_edit_queue_item', array($this, 'ajax_edit_item'));
@@ -102,8 +103,8 @@ class WPBQ_Admin_Page {
 
         add_submenu_page(
             'wpbq-queue',
-            'Import Archives',
-            'Import Archives',
+            'Import',
+            'Import',
             'manage_options',
             'wpbq-import',
             array($this, 'render_import_page')
@@ -679,6 +680,56 @@ if (isset($_POST['wpbq_run_cron']) && wp_verify_nonce($_POST['_wpnonce'], 'wpbq_
                     <span id="wpbq-import-status"></span>
                 </p>
             </form>
+
+            <hr>
+
+            <h1>📄 Bulk Import from CSV / JSON</h1>
+            <p>Add many posts at once from a spreadsheet or another tool. Upload a file or paste its contents, preview the result, then import. Rows are added to the end of the queue in file order.</p>
+
+            <form id="wpbq-bulk-form">
+                <table class="form-table">
+                    <tr>
+                        <th>Source File</th>
+                        <td>
+                            <input type="file" id="wpbq-bulk-file" accept=".csv,.tsv,.txt,.json,text/csv,application/json">
+                            <p class="description">Or paste CSV / JSON below.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><label for="wpbq-bulk-data">Data</label></th>
+                        <td>
+                            <textarea id="wpbq-bulk-data" rows="10" class="large-text code"
+                                placeholder="post_text,link_url,image_url,scheduled_at,blog_post_id&#10;&quot;Hello from the queue!&quot;,https://example.com,,2026-12-01 09:00,&#10;,,,,123"></textarea>
+                            <p class="description">
+                                <strong>CSV:</strong> first row is a header. Columns (any order, only <code>post_text</code> is required):
+                                <code>post_text</code>, <code>link_url</code>, <code>image_url</code>, <code>scheduled_at</code>, <code>blog_post_id</code>.
+                                Comma, semicolon or tab separated.<br>
+                                <strong>JSON:</strong> an array of objects with the same keys, e.g. <code>[{"post_text": "Hi", "link_url": "https://…"}]</code>.<br>
+                                <strong>scheduled_at</strong> is in the site's timezone (<?php echo esc_html(wp_timezone_string()); ?>) unless it includes an offset; leave blank for the sequential queue.
+                                Leave <strong>post_text</strong> blank with a <strong>blog_post_id</strong> to generate the text from your post templates.
+                                Max <?php echo esc_html(WPBQ_Bulk_Import::MAX_ROWS); ?> rows per import.
+                                <a href="#" id="wpbq-bulk-sample">Download a sample CSV</a>
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Duplicates</th>
+                        <td>
+                            <label>
+                                <input type="checkbox" id="wpbq-bulk-skip-dupes" checked>
+                                Skip rows whose text (or blog post) is already queued
+                            </label>
+                        </td>
+                    </tr>
+                </table>
+                <p class="submit">
+                    <button type="submit" class="button" id="wpbq-bulk-preview-btn">🔍 Preview</button>
+                    <button type="button" class="button button-primary" id="wpbq-bulk-import-btn" disabled>📥 Import to Queue</button>
+                    <span id="wpbq-bulk-status"></span>
+                </p>
+            </form>
+
+            <div id="wpbq-bulk-results"></div>
         </div>
         <?php
     }
@@ -1629,6 +1680,31 @@ if (isset($_POST['wpbq_run_cron']) && wp_verify_nonce($_POST['_wpnonce'], 'wpbq_
             'imported' => $imported,
             'message'  => "$imported posts imported to queue!",
         ));
+    }
+
+    public function ajax_bulk_import() {
+        check_ajax_referer('wpbq_nonce', 'nonce');
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+
+        $raw     = wp_unslash($_POST['data'] ?? '');
+        $dry_run = !empty($_POST['dry_run']);
+        $skip    = !empty($_POST['skip_duplicates']);
+
+        $parsed = WPBQ_Bulk_Import::parse($raw);
+        if (is_wp_error($parsed)) {
+            wp_send_json_error($parsed->get_error_message());
+        }
+
+        $result = WPBQ_Bulk_Import::import($parsed['rows'], $dry_run, $skip);
+        $result['warnings'] = $parsed['warnings'];
+        $result['dry_run']  = $dry_run;
+
+        if (!$dry_run) {
+            $c = $result['counts'];
+            WPBQ_Queue_Manager::log(0, 'import', "Bulk imported {$c['ok']} posts from CSV/JSON ({$c['skipped']} skipped, {$c['error']} errors)");
+        }
+
+        wp_send_json_success($result);
     }
 
     public function ajax_test_connection() {
