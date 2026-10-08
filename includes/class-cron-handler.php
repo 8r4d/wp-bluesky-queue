@@ -149,6 +149,7 @@ class WPBQ_Cron_Handler {
             'link_url'     => $data['url'],
             'image_url'    => $data['image_url'],
             'status'       => 'queued',
+            'placement'    => get_option('wpbq_revival_placement', 'end'),
         ));
  
         if ($queue_id) {

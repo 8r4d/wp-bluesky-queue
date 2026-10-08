@@ -215,6 +215,7 @@ class WPBQ_Admin_Page {
         register_setting($group, 'wpbq_auto_queue_enabled', 'absint');
         register_setting($group, 'wpbq_auto_queue_post_types');
         register_setting($group, 'wpbq_auto_queue_delay', 'absint');
+        register_setting($group, 'wpbq_auto_queue_placement', array('sanitize_callback' => array($this, 'sanitize_placement')));
         register_setting($group, 'wpbq_retention_days', 'absint');
 
         // Revive old posts
@@ -224,6 +225,35 @@ class WPBQ_Admin_Page {
         register_setting($group, 'wpbq_revival_min_age_days', 'absint');
         register_setting($group, 'wpbq_revival_cooldown_days', 'absint');
         register_setting($group, 'wpbq_revival_post_types');
+        register_setting($group, 'wpbq_revival_placement', array('sanitize_callback' => array($this, 'sanitize_placement')));
+
+        // Queue order
+        register_setting($group, 'wpbq_queue_order', array(
+            'sanitize_callback' => function($value) {
+                return $value === 'random' ? 'random' : 'in_order';
+            }
+        ));
+    }
+
+    public function sanitize_placement($value) {
+        return in_array($value, array('end', 'front', 'random'), true) ? $value : 'end';
+    }
+
+    /**
+     * Render a "where in the queue" dropdown for the given option
+     */
+    private function render_placement_select($option) {
+        $current = get_option($option, 'end');
+        $choices = array(
+            'end'    => 'End of the queue (after everything already waiting)',
+            'front'  => 'Front of the queue (next to post)',
+            'random' => 'Random spot in the queue',
+        );
+        echo '<select name="' . esc_attr($option) . '">';
+        foreach ($choices as $value => $label) {
+            printf('<option value="%s" %s>%s</option>', esc_attr($value), selected($current, $value, false), esc_html($label));
+        }
+        echo '</select>';
     }
 
     /**
@@ -1268,6 +1298,13 @@ if (isset($_POST['wpbq_run_cron']) && wp_verify_nonce($_POST['_wpnonce'], 'wpbq_
                                 <p class="description">0 = added to the sequential queue immediately. Otherwise, scheduled that many minutes out.</p>
                             </td>
                         </tr>
+                        <tr>
+                            <th>Queue Position</th>
+                            <td>
+                                <?php $this->render_placement_select('wpbq_auto_queue_placement'); ?>
+                                <p class="description">Where newly published posts land in the sequential queue (only applies when the delay is 0).</p>
+                            </td>
+                        </tr>
                     </table>
                 </div>
 
@@ -1341,6 +1378,13 @@ if (isset($_POST['wpbq_run_cron']) && wp_verify_nonce($_POST['_wpnonce'], 'wpbq_
                                 <p class="description">Which post types are eligible to be revived.</p>
                             </td>
                         </tr>
+                        <tr>
+                            <th>Queue Position</th>
+                            <td>
+                                <?php $this->render_placement_select('wpbq_revival_placement'); ?>
+                                <p class="description">Where revived posts land in the sequential queue. Choose "Front" so a revival doesn't wait behind a long backlog.</p>
+                            </td>
+                        </tr>
                         <!--<tr>
                             <th>Revived Today</th>
                             <td>
@@ -1373,6 +1417,17 @@ if (isset($_POST['wpbq_run_cron']) && wp_verify_nonce($_POST['_wpnonce'], 'wpbq_
                             <td>
                                 <input type="number" name="wpbq_post_interval" value="<?php echo esc_attr(get_option('wpbq_post_interval', 60)); ?>" min="5" max="1440">
                                 <p class="description">Minimum minutes between sequential queue posts</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Queue Order</th>
+                            <td>
+                                <?php $queue_order = get_option('wpbq_queue_order', 'in_order'); ?>
+                                <select name="wpbq_queue_order">
+                                    <option value="in_order" <?php selected($queue_order, 'in_order'); ?>>In order (top of the queue first)</option>
+                                    <option value="random" <?php selected($queue_order, 'random'); ?>>Random (any sequential item)</option>
+                                </select>
+                                <p class="description">Which sequential item goes out at each interval. "Random" ignores drag-and-drop order and queue positions; scheduled items still post at their set times.</p>
                             </td>
                         </tr>
                         <tr>

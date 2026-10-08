@@ -50,6 +50,7 @@ class WPBQ_Auto_Queue {
             'image_url'    => $data['image_url'],
             'status'       => 'queued',
             'scheduled_at' => $scheduled_at,
+            'placement'    => get_option('wpbq_auto_queue_placement', 'end'),
         ));
 
         if ($queue_id) {

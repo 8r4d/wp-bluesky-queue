@@ -52,14 +52,13 @@ class WPBQ_Queue_Manager {
             'status'       => 'queued',
             'scheduled_at' => null,
             'sort_order'   => 0,
+            'placement'    => 'end', // where in the sequential queue: end, front or random
         );
 
         $data = wp_parse_args($data, $defaults);
 
-        // Auto-set sort_order to end of queue
         if (empty($data['sort_order'])) {
-            $max = $wpdb->get_var("SELECT MAX(sort_order) FROM " . self::$table_name);
-            $data['sort_order'] = ($max !== null) ? $max + 1 : 0;
+            $data['sort_order'] = self::claim_sort_order($data['placement']);
         }
 
         $wpdb->insert(self::$table_name, array(
@@ -74,6 +73,42 @@ class WPBQ_Queue_Manager {
         ));
 
         return $wpdb->insert_id;
+    }
+
+    /**
+     * Pick a sort_order for a new item so it lands at the end of the
+     * sequential queue, the front (next to post), or a random spot in it.
+     */
+    private static function claim_sort_order($placement) {
+        global $wpdb;
+
+        if ($placement === 'front') {
+            $min = $wpdb->get_var("SELECT MIN(sort_order) FROM " . self::$table_name . " WHERE status = 'queued'");
+            return ($min !== null) ? intval($min) - 1 : 0;
+        }
+
+        if ($placement === 'random') {
+            $orders = $wpdb->get_col(
+                "SELECT sort_order FROM " . self::$table_name . "
+                 WHERE status = 'queued' AND scheduled_at IS NULL
+                 ORDER BY sort_order ASC"
+            );
+            // Index count($orders) means "after the last one"
+            $slot = empty($orders) ? 0 : wp_rand(0, count($orders));
+            if ($slot < count($orders)) {
+                // Shift everything from that slot back by one to open a gap
+                $target = intval($orders[$slot]);
+                $wpdb->query($wpdb->prepare(
+                    "UPDATE " . self::$table_name . " SET sort_order = sort_order + 1
+                     WHERE status = 'queued' AND sort_order >= %d",
+                    $target
+                ));
+                return $target;
+            }
+        }
+
+        $max = $wpdb->get_var("SELECT MAX(sort_order) FROM " . self::$table_name);
+        return ($max !== null) ? $max + 1 : 0;
     }
 
     /**
@@ -159,11 +194,14 @@ class WPBQ_Queue_Manager {
         global $wpdb;
         self::init();
 
+        // "random" ignores the drag-and-drop order and picks any sequential item
+        $order = get_option('wpbq_queue_order', 'in_order') === 'random' ? 'RAND()' : 'sort_order ASC';
+
         return $wpdb->get_row(
             "SELECT * FROM " . self::$table_name . "
              WHERE status = 'queued'
              AND scheduled_at IS NULL
-             ORDER BY sort_order ASC
+             ORDER BY $order
              LIMIT 1"
         );
     }
